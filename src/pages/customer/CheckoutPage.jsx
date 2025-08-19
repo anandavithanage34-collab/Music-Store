@@ -174,6 +174,9 @@ export default function CheckoutPage() {
       // Clear cart
       await clearCart()
 
+      // Show success message briefly before navigation
+      alert('🎉 Order placed successfully! Redirecting to confirmation page...')
+
       // Navigate to success page
       navigate(`/order-success/${orderId}`)
 

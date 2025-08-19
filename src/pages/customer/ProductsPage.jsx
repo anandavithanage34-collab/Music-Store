@@ -138,8 +138,60 @@ export default function ProductsPage() {
       const { data, error } = await query
 
       if (error) {
-        console.log('Using sample products - Supabase not connected')
-        setProducts(sampleProducts)
+        // Use sample data with client-side filtering
+        console.log('Using sample data - Supabase not connected')
+        let filteredProducts = [...sampleProducts]
+
+        if (filters.search) {
+          filteredProducts = filteredProducts.filter(p => 
+            p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+            p.description.toLowerCase().includes(filters.search.toLowerCase())
+          )
+        }
+
+        if (filters.category) {
+          filteredProducts = filteredProducts.filter(p => 
+            p.categories.slug === filters.category
+          )
+        }
+
+        if (filters.brand) {
+          filteredProducts = filteredProducts.filter(p => 
+            p.brands.name === filters.brand
+          )
+        }
+
+        if (filters.minPrice) {
+          filteredProducts = filteredProducts.filter(p => p.price >= parseFloat(filters.minPrice))
+        }
+
+        if (filters.maxPrice) {
+          filteredProducts = filteredProducts.filter(p => p.price <= parseFloat(filters.maxPrice))
+        }
+
+        if (filters.skillLevel) {
+          filteredProducts = filteredProducts.filter(p => 
+            p.suitable_for.includes(filters.skillLevel)
+          )
+        }
+
+        // Client-side sorting
+        switch (filters.sortBy) {
+          case 'price_low':
+            filteredProducts.sort((a, b) => a.price - b.price)
+            break
+          case 'price_high':
+            filteredProducts.sort((a, b) => b.price - a.price)
+            break
+          case 'newest':
+            // Sample data doesn't have created_at, so we'll use name
+            filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
+            break
+          default:
+            filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
+        }
+
+        setProducts(filteredProducts)
       } else {
         setProducts(data || [])
       }
@@ -180,52 +232,8 @@ export default function ProductsPage() {
     setSearchParams(params)
   }
 
-  // Client-side filtering for sample data
-  const filteredProducts = products.filter(product => {
-    // Search filter
-    if (filters.search && !product.name.toLowerCase().includes(filters.search.toLowerCase())) {
-      return false
-    }
-
-    // Category filter
-    if (filters.category && product.category_slug !== filters.category) {
-      return false
-    }
-
-    // Brand filter
-    if (filters.brand && product.brand_name !== filters.brand) {
-      return false
-    }
-
-    // Price range filter
-    if (filters.minPrice && product.price < parseFloat(filters.minPrice)) {
-      return false
-    }
-
-    if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) {
-      return false
-    }
-
-    // Skill level filter
-    if (filters.skillLevel && !product.suitable_for?.includes(filters.skillLevel)) {
-      return false
-    }
-
-    return true
-  }).sort((a, b) => {
-    switch (filters.sortBy) {
-      case 'price_low':
-        return a.price - b.price
-      case 'price_high':
-        return b.price - a.price
-      case 'newest':
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0)
-      case 'popular':
-        return (b.total_sales || 0) - (a.total_sales || 0)
-      default:
-        return a.name.localeCompare(b.name)
-    }
-  })
+  // Products are already filtered from fetchProducts - no need for additional filtering
+  const filteredProducts = products
 
   const hasActiveFilters = Object.values(filters).some(value => value && value !== 'name')
 

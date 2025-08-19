@@ -23,9 +23,16 @@ export default function Navbar() {
   }
 
   const handleSignOut = async () => {
-    await signOut()
-    setIsUserMenuOpen(false)
-    navigate('/')
+    try {
+      setIsUserMenuOpen(false)
+      await signOut()
+      // Show success message
+      alert('✅ Successfully signed out!')
+      navigate('/')
+    } catch (error) {
+      console.error('Signout error:', error)
+      alert('❌ Signout failed. Please try again.')
+    }
   }
 
   const cartItemCount = getCartCount()
@@ -81,14 +88,17 @@ export default function Navbar() {
                 {item.hasDropdown && (
                   <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
                     <div className="p-6 space-y-4">
-                      <Link to="/products?category=string_instruments" className="block text-gray-700 hover:text-gray-900 font-medium">
-                        String Instruments
+                      <Link to="/products?category=guitars_basses" className="block text-gray-700 hover:text-gray-900 font-medium">
+                        Guitars and Basses
                       </Link>
-                      <Link to="/products?category=wind_instruments" className="block text-gray-700 hover:text-gray-900 font-medium">
-                        Wind Instruments
+                      <Link to="/products?category=drums_percussion" className="block text-gray-700 hover:text-gray-900 font-medium">
+                        Drums and Percussion
                       </Link>
-                      <Link to="/products?category=percussion" className="block text-gray-700 hover:text-gray-900 font-medium">
-                        Percussion
+                      <Link to="/products?category=keys" className="block text-gray-700 hover:text-gray-900 font-medium">
+                        Keys
+                      </Link>
+                      <Link to="/products?category=studio_recording" className="block text-gray-700 hover:text-gray-900 font-medium">
+                        Studio and Recording Equipment
                       </Link>
                       <Link to="/products?category=traditional" className="block text-gray-700 hover:text-gray-900 font-medium">
                         Traditional Sri Lankan

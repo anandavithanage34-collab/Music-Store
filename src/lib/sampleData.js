@@ -49,7 +49,7 @@ export const sampleProducts = [
     warranty_months: 12,
     is_active: true,
     brands: { name: 'Roland' },
-    categories: { name: 'Electronic', slug: 'electronic' },
+    categories: { name: 'Keys', slug: 'keys' },
     product_images: [{
       image_url: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=600&q=80',
       is_primary: true,
@@ -75,7 +75,7 @@ export const sampleProducts = [
     warranty_months: 6,
     is_active: true,
     brands: { name: 'Traditional Crafts LK' },
-    categories: { name: 'Traditional Sri Lankan', slug: 'traditional' },
+    categories: { name: 'Drums and Percussion', slug: 'drums_percussion' },
     product_images: [{
       image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
       is_primary: true,
@@ -103,29 +103,142 @@ export const sampleProducts = [
     warranty_months: 12,
     is_active: true,
     brands: { name: 'Fender' },
-    categories: { name: 'String Instruments', slug: 'string_instruments' },
+    categories: { name: 'Guitars and Basses', slug: 'guitars_basses' },
     product_images: [{
       image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
       is_primary: true,
       alt_text: 'Fender Player Stratocaster'
     }],
     inventory: { quantity_available: 12 }
+  },
+  {
+    id: '5',
+    name: 'Pearl Export Series Drum Kit',
+    description: 'Complete 5-piece drum kit perfect for beginners and intermediate drummers. Includes cymbals and hardware.',
+    price: 185000,
+    category_id: '2',
+    brand_id: '6',
+    sku: 'DRM-PRL-EXPO-H8I9',
+    suitable_for: ['beginner', 'intermediate'],
+    features: ['5-piece configuration', 'Poplar shells', 'Chrome hardware', 'Cymbals included'],
+    specifications: {
+      shells: 'Poplar wood',
+      configuration: '5-piece',
+      cymbals: 'Included',
+      hardware: 'Chrome'
+    },
+    warranty_months: 12,
+    is_active: true,
+    brands: { name: 'Pearl' },
+    categories: { name: 'Drums and Percussion', slug: 'drums_percussion' },
+    product_images: [{
+      image_url: 'https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?auto=format&fit=crop&w=600&q=80',
+      is_primary: true,
+      alt_text: 'Pearl Export Series Drum Kit'
+    }],
+    inventory: { quantity_available: 5 }
+  },
+  {
+    id: '6',
+    name: 'Audio-Technica AT2020 Studio Microphone',
+    description: 'Professional cardioid condenser microphone ideal for recording vocals and instruments in studio environments.',
+    price: 28000,
+    category_id: '4',
+    brand_id: '7',
+    sku: 'STU-ATE-AT20-J9K0',
+    suitable_for: ['intermediate', 'professional'],
+    features: ['Cardioid pattern', 'Low noise', 'High SPL capability', 'Phantom power'],
+    specifications: {
+      type: 'Condenser',
+      pattern: 'Cardioid',
+      frequency_response: '20Hz-20kHz',
+      phantom_power: '48V required'
+    },
+    warranty_months: 24,
+    is_active: true,
+    brands: { name: 'Audio-Technica' },
+    categories: { name: 'Studio and Recording Equipment', slug: 'studio_recording' },
+    product_images: [{
+      image_url: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=600&q=80',
+      is_primary: true,
+      alt_text: 'Audio-Technica AT2020 Studio Microphone'
+    }],
+    inventory: { quantity_available: 20 }
+  },
+  {
+    id: '7',
+    name: 'Casio CT-X700 Keyboard',
+    description: 'Full-size 61-key keyboard with advanced sound technology and built-in learning features.',
+    price: 65000,
+    category_id: '3',
+    brand_id: '8',
+    sku: 'KEY-CAS-CTX7-L1M2',
+    suitable_for: ['beginner', 'intermediate'],
+    features: ['61 keys', '600 tones', 'USB connectivity', 'Built-in lessons'],
+    specifications: {
+      keys: '61 full-size',
+      tones: '600',
+      rhythms: '195',
+      connectivity: 'USB, Audio In/Out'
+    },
+    warranty_months: 12,
+    is_active: true,
+    brands: { name: 'Casio' },
+    categories: { name: 'Keys', slug: 'keys' },
+    product_images: [{
+      image_url: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=600&q=80',
+      is_primary: true,
+      alt_text: 'Casio CT-X700 Keyboard'
+    }],
+    inventory: { quantity_available: 18 }
+  },
+  {
+    id: '8',
+    name: 'Ibanez GSR200 Bass Guitar',
+    description: 'Affordable 4-string electric bass guitar perfect for beginners. Classic design with modern playability.',
+    price: 55000,
+    category_id: '1',
+    brand_id: '9',
+    sku: 'BAS-IBA-GSR2-N3O4',
+    suitable_for: ['beginner', 'intermediate'],
+    features: ['4-string configuration', 'Poplar body', 'Maple neck', 'Standard electronics'],
+    specifications: {
+      strings: '4',
+      body: 'Poplar',
+      neck: 'Maple',
+      frets: '22',
+      scale: '34 inches'
+    },
+    warranty_months: 12,
+    is_active: true,
+    brands: { name: 'Ibanez' },
+    categories: { name: 'Guitars and Basses', slug: 'guitars_basses' },
+    product_images: [{
+      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
+      is_primary: true,
+      alt_text: 'Ibanez GSR200 Bass Guitar'
+    }],
+    inventory: { quantity_available: 10 }
   }
 ]
 
 export const sampleCategories = [
-  { id: '1', name: 'String Instruments', slug: 'string_instruments', description: 'Guitars, bass, violin, sitar and other string instruments' },
-  { id: '2', name: 'Wind Instruments', slug: 'wind_instruments', description: 'Flutes, saxophones, trumpets and wind instruments' },
-  { id: '3', name: 'Percussion', slug: 'percussion', description: 'Drums, tabla, traditional percussion instruments' },
-  { id: '4', name: 'Electronic', slug: 'electronic', description: 'Keyboards, synthesizers, electronic drums' },
-  { id: '5', name: 'Traditional Sri Lankan', slug: 'traditional', description: 'Sitar, tabla, flute and traditional Sri Lankan instruments' },
-  { id: '6', name: 'Accessories', slug: 'accessories', description: 'Strings, picks, cases, stands and accessories' }
+  { id: '1', name: 'Guitars and Basses', slug: 'guitars_basses', description: 'Electric guitars, acoustic guitars, bass guitars and accessories', sort_order: 1, is_active: true },
+  { id: '2', name: 'Drums and Percussion', slug: 'drums_percussion', description: 'Acoustic drums, electronic drums, percussion instruments', sort_order: 2, is_active: true },
+  { id: '3', name: 'Keys', slug: 'keys', description: 'Pianos, keyboards, synthesizers and MIDI controllers', sort_order: 3, is_active: true },
+  { id: '4', name: 'Studio and Recording Equipment', slug: 'studio_recording', description: 'Audio interfaces, microphones, monitors and recording gear', sort_order: 4, is_active: true },
+  { id: '5', name: 'Traditional Sri Lankan', slug: 'traditional', description: 'Sitar, tabla, flute and traditional Sri Lankan instruments', sort_order: 5, is_active: true },
+  { id: '6', name: 'Accessories', slug: 'accessories', description: 'Strings, picks, cases, stands and accessories', sort_order: 6, is_active: true }
 ]
 
 export const sampleBrands = [
-  { id: '1', name: 'Yamaha' },
-  { id: '2', name: 'Fender' },
-  { id: '3', name: 'Gibson' },
-  { id: '4', name: 'Roland' },
-  { id: '5', name: 'Traditional Crafts LK' }
+  { id: '1', name: 'Yamaha', is_active: true },
+  { id: '2', name: 'Fender', is_active: true },
+  { id: '3', name: 'Gibson', is_active: true },
+  { id: '4', name: 'Roland', is_active: true },
+  { id: '5', name: 'Traditional Crafts LK', is_active: true },
+  { id: '6', name: 'Pearl', is_active: true },
+  { id: '7', name: 'Audio-Technica', is_active: true },
+  { id: '8', name: 'Casio', is_active: true },
+  { id: '9', name: 'Ibanez', is_active: true }
 ]
