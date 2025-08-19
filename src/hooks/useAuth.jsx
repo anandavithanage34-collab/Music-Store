@@ -3,6 +3,19 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext()
 
+// Helper function to get the correct redirect URL for production and development
+const getRedirectUrl = (path) => {
+  // Check if we're in production (Vercel deployment)
+  if (typeof window !== 'undefined') {
+    // For Vercel deployments, use the current origin
+    // For localhost, this will be http://localhost:5173 (or whatever port Vite uses)
+    // For production, this will be your Vercel URL
+    return `${window.location.origin}${path}`
+  }
+  // Fallback for SSR (shouldn't happen in this context but good to have)
+  return `http://localhost:5173${path}`
+}
+
 export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) {
@@ -136,7 +149,7 @@ export function AuthProvider({ children }) {
             city: profileData.city,
             age: profileData.age
           },
-          emailRedirectTo: `${window.location.origin}/confirm-email`
+          emailRedirectTo: getRedirectUrl('/confirm-email')
         }
       })
 
