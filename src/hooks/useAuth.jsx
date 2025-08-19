@@ -22,24 +22,30 @@ export function AuthProvider({ children }) {
         const storedUser = localStorage.getItem('harmony_house_user')
         if (storedUser) {
           const userData = JSON.parse(storedUser)
-          console.log('📥 Found stored user:', userData.email)
+          console.log('📥 Found stored user:', userData.email || userData.username)
           
-          // Verify user still exists in database
-          const { data, error } = await supabase.rpc('get_user_by_id', {
-            p_user_id: userData.id
-          })
-          
-          if (error) {
-            console.error('❌ Error verifying stored user:', error)
-            localStorage.removeItem('harmony_house_user')
-            setUser(null)
-          } else if (data.success) {
-            console.log('✅ User verified from database:', data.user.email)
-            setUser(data.user)
+          // If it's an admin user, just set it (hardcoded credentials don't need DB verification)
+          if (userData.role === 'admin') {
+            console.log('✅ Admin user restored from storage')
+            setUser(userData)
           } else {
-            console.log('❌ User not found in database, clearing storage')
-            localStorage.removeItem('harmony_house_user')
-            setUser(null)
+            // Verify regular user still exists in database
+            const { data, error } = await supabase.rpc('get_user_by_id', {
+              p_user_id: userData.id
+            })
+            
+            if (error) {
+              console.error('❌ Error verifying stored user:', error)
+              localStorage.removeItem('harmony_house_user')
+              setUser(null)
+            } else if (data.success) {
+              console.log('✅ User verified from database:', data.user.email)
+              setUser(data.user)
+            } else {
+              console.log('❌ User not found in database, clearing storage')
+              localStorage.removeItem('harmony_house_user')
+              setUser(null)
+            }
           }
         }
       } catch (error) {
@@ -119,6 +125,40 @@ export function AuthProvider({ children }) {
       return { data: { user: data.user }, error: null }
     } catch (error) {
       console.error('❌ Error in sign in:', error)
+      return { data: null, error }
+    }
+  }
+
+  const signInAdmin = async (username, password) => {
+    try {
+      console.log('🔐 Attempting admin login:', username)
+      
+      const { data, error } = await supabase.rpc('authenticate_admin', {
+        p_username: username,
+        p_password: password
+      })
+
+      if (error) {
+        console.error('❌ Admin login error:', error)
+        return { data: null, error }
+      }
+
+      if (!data.success) {
+        console.error('❌ Admin login failed:', data.error)
+        return { data: null, error: { message: data.error } }
+      }
+
+      const adminUser = data.user
+      console.log('✅ Admin login successful:', adminUser.username)
+      
+      // Store admin user in localStorage and state
+      localStorage.setItem('harmony_house_user', JSON.stringify(adminUser))
+      setUser(adminUser)
+      
+      return { data: { user: adminUser }, error: null }
+      
+    } catch (error) {
+      console.error('❌ Admin login error:', error)
       return { data: null, error }
     }
   }
@@ -277,6 +317,7 @@ export function AuthProvider({ children }) {
     loading,
     signUp,
     signIn,
+    signInAdmin,
     signOut,
     updateProfile,
     completeOnboarding,

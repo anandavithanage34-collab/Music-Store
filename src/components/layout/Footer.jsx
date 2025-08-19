@@ -198,6 +198,9 @@ export default function Footer() {
                 <Link to="/cookies" className="text-xs text-gray-400 hover:text-gray-300 transition-colors">
                   Cookie Policy
                 </Link>
+                <Link to="/admin/login" className="text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium">
+                  Admin
+                </Link>
               </div>
             </motion.div>
           </div>

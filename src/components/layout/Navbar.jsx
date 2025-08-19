@@ -94,7 +94,7 @@ export default function Navbar() {
                 <div key={item.name} className="relative group">
                   <Link
                     to={item.href}
-                    className="flex items-center space-x-1 text-gray-700 hover:text-white transition-all duration-300 font-medium py-2 px-4 rounded-full hover:bg-gray-900"
+                    className={item.className || "flex items-center space-x-1 text-gray-700 hover:text-white transition-all duration-300 font-medium py-2 px-4 rounded-full hover:bg-gray-900"}
                   >
                     <span>{item.name}</span>
                     {item.hasDropdown && (
@@ -231,9 +231,9 @@ export default function Navbar() {
                           <Link 
                             to="/admin" 
                             onClick={() => setIsUserMenuOpen(false)}
-                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                            className="block px-4 py-3 text-sm text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors font-medium"
                           >
-                            Admin Dashboard
+                            🛠️ Admin Dashboard
                           </Link>
                         )}
                         {(user?.role === 'staff' || user?.role === 'admin') && (
@@ -322,7 +322,7 @@ export default function Navbar() {
                   key={item.name}
                   to={item.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className="block py-3 text-gray-700 hover:text-gray-900 transition-colors font-medium text-lg"
+                  className={item.className || "block py-3 text-gray-700 hover:text-gray-900 transition-colors font-medium text-lg"}
                 >
                   {item.name}
                 </Link>

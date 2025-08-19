@@ -18,6 +18,7 @@ import AboutPage from './pages/customer/AboutPage'
 import ContactPage from './pages/customer/ContactPage'
 import NotFoundPage from './pages/NotFoundPage'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminLoginPage from './pages/admin/AdminLoginPage'
 import StaffDashboard from './pages/admin/StaffDashboard'
 import { AuthProvider } from './hooks/useAuth'
 import { CartProvider } from './hooks/useCart'
@@ -44,7 +45,8 @@ function App() {
               <Route path="/order-success/:orderId" element={<OrderSuccessPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/admin/*" element={<AdminDashboard />} />
+              <Route path="/admin/login" element={<AdminLoginPage />} />
+              <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/staff/*" element={<StaffDashboard />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
