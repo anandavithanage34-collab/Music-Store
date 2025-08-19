@@ -9,7 +9,7 @@ import { SriLankanCities } from '../../types'
 import { supabase } from '../../lib/supabase'
 
 export default function ProfilePage() {
-  const { user, profile, updateProfile, loading: authLoading } = useAuth()
+  const { user, updateProfile, signOut, loading: authLoading } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -22,18 +22,18 @@ export default function ProfilePage() {
     age: ''
   })
   
-  // Update form data when profile changes
+  // Update form data when user changes
   useEffect(() => {
-    if (profile) {
+    if (user) {
       const newFormData = {
-        full_name: profile.full_name || '',
-        phone: profile.phone || '',
-        city: profile.city || '',
-        age: profile.age?.toString() || ''
+        full_name: user.full_name || '',
+        phone: user.phone || '',
+        city: user.city || '',
+        age: user.age?.toString() || ''
       }
       setFormData(newFormData)
     }
-  }, [profile])
+  }, [user])
 
   // Fetch onboarding responses when user is available
   useEffect(() => {
@@ -119,12 +119,12 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     // Reset form data to original values
-    if (profile) {
+    if (user) {
       setFormData({
-        full_name: profile.full_name || '',
-        phone: profile.phone || '',
-        city: profile.city || '',
-        age: profile.age?.toString() || ''
+        full_name: user.full_name || '',
+        phone: user.phone || '',
+        city: user.city || '',
+        age: user.age?.toString() || ''
       })
     }
     setIsEditing(false)
@@ -315,7 +315,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Skill Level Card */}
-          {profile?.skill_level && (
+          {user?.skill_level && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -327,12 +327,12 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className={`inline-block px-4 py-2 rounded-full text-lg font-semibold ${
-                      profile.skill_level === 'professional' ? 'bg-purple-100 text-purple-800' :
-                      profile.skill_level === 'intermediate' ? 'bg-blue-100 text-blue-800' :
+                      user.skill_level === 'professional' ? 'bg-purple-100 text-purple-800' :
+                      user.skill_level === 'intermediate' ? 'bg-blue-100 text-blue-800' :
                       'bg-green-100 text-green-800'
                     }`}>
-                      {profile.skill_level === 'professional' ? '🎼 Professional' :
-                       profile.skill_level === 'intermediate' ? '🎵 Intermediate' :
+                      {user.skill_level === 'professional' ? '🎼 Professional' :
+                       user.skill_level === 'intermediate' ? '🎵 Intermediate' :
                        '🎶 Beginner'}
                     </div>
                     <p className="text-gray-600 mt-2">
@@ -403,7 +403,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="p-4 bg-orange-50 rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">
-                    {profile?.onboarding_completed ? '✓' : '○'}
+                    {user?.onboarding_completed ? '✓' : '○'}
                   </div>
                   <div className="text-sm text-gray-600">Onboarding</div>
                 </div>
@@ -428,8 +428,8 @@ export default function ProfilePage() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    supabase.auth.signOut()
+                  onClick={async () => {
+                    await signOut()
                     window.location.href = '/'
                   }}
                   className="w-full"

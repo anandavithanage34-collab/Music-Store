@@ -10,7 +10,7 @@ import CheckoutPage from './pages/customer/CheckoutPage'
 import LoginPage from './pages/customer/LoginPage'
 import RegisterPage from './pages/customer/RegisterPage'
 import OnboardingPage from './pages/customer/OnboardingPage'
-import EmailConfirmationPage from './pages/customer/EmailConfirmationPage'
+
 import ProfilePage from './pages/customer/ProfilePage'
 import OrdersPage from './pages/customer/OrdersPage'
 import OrderSuccessPage from './pages/customer/OrderSuccessPage'
@@ -38,7 +38,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
-              <Route path="/confirm-email" element={<EmailConfirmationPage />} />
+
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/order-success/:orderId" element={<OrderSuccessPage />} />

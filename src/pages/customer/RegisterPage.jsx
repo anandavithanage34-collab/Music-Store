@@ -85,32 +85,6 @@ export default function RegisterPage() {
     try {
       console.log('💾 Saving onboarding responses for user:', userId)
       
-      // Wait for profile to be created by trigger (give it 2 seconds)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Check if profile exists
-      const { data: profileCheck, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single()
-
-      if (profileCheckError) {
-        console.error('❌ Profile not found, creating manually...', profileCheckError)
-        // Try to create profile manually using the database function
-        const { error: createError } = await supabase.rpc('create_profile_for_user', { 
-          user_id: userId 
-        })
-        
-        if (createError) {
-          console.error('❌ Failed to create profile manually:', createError)
-          return { success: false, error: createError }
-        }
-        
-        // Wait a bit more for profile creation
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      }
-      
       // Prepare responses data
       const responsesData = Object.entries(onboardingData.answers).map(([questionId, answer]) => ({
         user_id: userId,
@@ -136,23 +110,24 @@ export default function RegisterPage() {
 
       console.log('✅ Onboarding responses saved successfully:', savedResponses)
 
-      // Update profile with skill level
-      const { data: updatedProfile, error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          skill_level: onboardingData.skillLevel,
-          onboarding_completed: true
-        })
-        .eq('id', userId)
-        .select()
-        .single()
+      // Update user with skill level and onboarding completion
+      const { data: updateResult, error: updateError } = await supabase.rpc('update_user_profile', {
+        p_user_id: userId,
+        p_skill_level: onboardingData.skillLevel,
+        p_onboarding_completed: true
+      })
 
-      if (profileError) {
-        console.error('❌ Failed to update profile with skill level:', profileError)
-        return { success: false, error: profileError }
+      if (updateError) {
+        console.error('❌ Failed to update user with skill level:', updateError)
+        return { success: false, error: updateError }
       }
 
-      console.log('✅ Profile updated with skill level:', updatedProfile)
+      if (!updateResult.success) {
+        console.error('❌ User update failed:', updateResult.error)
+        return { success: false, error: { message: updateResult.error } }
+      }
+
+      console.log('✅ User updated with skill level:', updateResult.user)
       return { success: true }
     } catch (error) {
       console.error('❌ Error saving onboarding responses:', error)
@@ -208,17 +183,17 @@ export default function RegisterPage() {
         // Clear onboarding data from localStorage
         localStorage.removeItem('onboardingData')
         
-        setSuccess('Account created successfully! Please check your email to confirm your account before signing in.')
+        setSuccess('Account created successfully! You can now sign in.')
         
         // Wait a moment to show success message, then redirect to login
         setTimeout(() => {
           navigate('/login', {
             state: {
-              message: 'Account created! Please check your email and click the confirmation link to activate your account.',
-              type: 'info'
+              message: 'Account created successfully! You can now sign in with your credentials.',
+              type: 'success'
             }
           })
-        }, 3000)
+        }, 2000)
       } else {
         setErrors({ submit: 'Registration failed. Please try again.' })
       }

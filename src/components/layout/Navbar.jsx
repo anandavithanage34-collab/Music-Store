@@ -11,7 +11,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const { isAuthenticated, profile, signOut } = useAuth()
+  const { isAuthenticated, user, signOut } = useAuth()
   const { getCartCount } = useCart()
   const navigate = useNavigate()
 
@@ -183,7 +183,7 @@ export default function Navbar() {
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <span className="hidden sm:block text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                    {profile?.full_name?.split(' ')[0] || 'User'}
+                    {user?.full_name?.split(' ')[0] || 'User'}
                   </span>
                   <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -199,8 +199,8 @@ export default function Navbar() {
                       className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2"
                     >
                       <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                        <p className="text-xs text-gray-500">{profile?.email}</p>
+                        <p className="text-sm font-medium text-gray-900">{user?.full_name}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
                       </div>
                       
                       <div className="py-2">
@@ -218,7 +218,7 @@ export default function Navbar() {
                         >
                           My Orders
                         </Link>
-                        {!profile?.onboarding_completed && (
+                        {!user?.onboarding_completed && (
                           <Link 
                             to="/onboarding" 
                             onClick={() => setIsUserMenuOpen(false)}
@@ -227,7 +227,7 @@ export default function Navbar() {
                             🎯 Complete Assessment
                           </Link>
                         )}
-                        {profile?.role === 'admin' && (
+                        {user?.role === 'admin' && (
                           <Link 
                             to="/admin" 
                             onClick={() => setIsUserMenuOpen(false)}
@@ -236,7 +236,7 @@ export default function Navbar() {
                             Admin Dashboard
                           </Link>
                         )}
-                        {(profile?.role === 'staff' || profile?.role === 'admin') && (
+                        {(user?.role === 'staff' || user?.role === 'admin') && (
                           <Link 
                             to="/staff" 
                             onClick={() => setIsUserMenuOpen(false)}
