@@ -66,7 +66,6 @@ export default function RegisterPage() {
     
     if (!validateForm()) return
 
-    setLoading(true)
     try {
       const profileData = {
         full_name: formData.full_name,
@@ -85,8 +84,6 @@ export default function RegisterPage() {
       }
     } catch (error) {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -254,7 +251,7 @@ export default function RegisterPage() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                loading={loading}
+
                 disabled={loading}
               >
                 Create Account

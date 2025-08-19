@@ -156,21 +156,28 @@ export default function CartPage() {
                             <div className="flex items-center space-x-4">
                               <span className="text-sm font-medium text-gray-700">Quantity</span>
                               <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50">
-                                <button
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
                                   onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
-                                  className="p-3 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
+                                  className="p-3 hover:bg-gray-900 hover:text-white transition-all duration-300 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={item.quantity <= 1}
+                                  title="Decrease quantity"
                                 >
                                   <Minus className="h-4 w-4" />
-                                </button>
+                                </motion.button>
                                 <span className="px-4 py-3 text-center min-w-[60px] font-medium text-gray-900">
                                   {item.quantity}
                                 </span>
-                                <button
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
                                   onClick={() => handleQuantityChange(item.product_id, item.quantity + 1)}
-                                  className="p-3 hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
+                                  className="p-3 hover:bg-gray-900 hover:text-white transition-all duration-300 text-gray-600"
+                                  title="Increase quantity"
                                 >
                                   <Plus className="h-4 w-4" />
-                                </button>
+                                </motion.button>
                               </div>
                             </div>
 
@@ -189,8 +196,13 @@ export default function CartPage() {
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
-                                onClick={() => removeFromCart(item.product_id)}
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to remove this item from your cart?')) {
+                                    removeFromCart(item.product_id)
+                                  }
+                                }}
                                 className="p-3 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-300"
+                                title="Remove from cart"
                               >
                                 <Trash2 className="h-5 w-5" />
                               </motion.button>

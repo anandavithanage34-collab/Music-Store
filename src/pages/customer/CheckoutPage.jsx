@@ -478,7 +478,7 @@ export default function CheckoutPage() {
                       onClick={handlePlaceOrder}
                       className="w-full mb-4"
                       size="lg"
-                      loading={loading}
+
                       disabled={loading || cartItems.length === 0}
                     >
                       <Shield className="mr-2 h-5 w-5" />

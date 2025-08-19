@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { useAuth } from '../../hooks/useAuth'
 import { formatPrice, formatDate } from '../../lib/utils'
 import { supabase } from '../../lib/supabase'
+import { sampleProducts } from '../../lib/sampleData'
 
 export default function OrdersPage() {
   const { user } = useAuth()
@@ -19,10 +20,115 @@ export default function OrdersPage() {
     }
   }, [user])
 
+  // Add some sample orders for testing
+  const createSampleOrders = () => {
+    const sampleOrders = [
+      {
+        id: 'mock-order-1',
+        order_number: 'MUS-001',
+        user_id: user.id,
+        status: 'delivered',
+        total_amount: 25000,
+        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        shipping_address: {
+          full_name: 'John Doe',
+          city: 'Colombo',
+          address_line_1: '123 Main Street',
+          phone: '+94 77 123 4567'
+        },
+        order_items: [
+          {
+            id: 'item-1',
+            product_id: '1',
+            quantity: 1,
+            unit_price: 25000,
+            total_price: 25000
+          }
+        ]
+      },
+      {
+        id: 'mock-order-2',
+        order_number: 'MUS-002', 
+        user_id: user.id,
+        status: 'processing',
+        total_amount: 45000,
+        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        shipping_address: {
+          full_name: 'Jane Smith',
+          city: 'Kandy',
+          address_line_1: '456 Hill Road',
+          phone: '+94 77 987 6543'
+        },
+        order_items: [
+          {
+            id: 'item-2',
+            product_id: '2',
+            quantity: 1,
+            unit_price: 45000,
+            total_price: 45000
+          }
+        ]
+      }
+    ];
+
+    localStorage.setItem('mock_orders', JSON.stringify(sampleOrders));
+    console.log('✨ Sample orders created for testing');
+  };
+
   const fetchOrders = async () => {
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
     try {
+      console.log('🔍 Fetching orders for user:', user.id)
+      
+      // Always check localStorage for orders first (since we're using hardcoded data)
+      let mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
+      console.log('📦 Found mock orders:', mockOrders)
+      
+      // If no orders exist, create sample orders for testing
+      if (mockOrders.length === 0) {
+        createSampleOrders()
+        mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
+      }
+      
+      // Filter orders for current user
+      const userOrders = mockOrders.filter(order => 
+        order.user_id === user.id || 
+        order.user_id === 'mock-user' ||
+        order.user_id?.startsWith('mock-') // Include all mock orders for testing
+      )
+      console.log('👤 User orders filtered:', userOrders)
+      
+      if (userOrders.length > 0) {
+        // Enrich order items with full product details from sampleProducts
+        const enrichedOrders = userOrders.map(order => ({
+          ...order,
+          order_items: order.order_items?.map(item => {
+            const productDetails = sampleProducts.find(p => p.id == item.product_id) // Use == for type flexibility
+            return {
+              ...item,
+              products: productDetails || {
+                id: item.product_id,
+                name: `Product ${item.product_id}`,
+                price: item.unit_price || 0,
+                product_images: []
+              }
+            }
+          }) || []
+        }))
+        
+        console.log('✅ Setting enriched orders:', enrichedOrders)
+        setOrders(enrichedOrders)
+        setLoading(false)
+        return
+      }
+
+      console.log('🔄 No localStorage orders, trying database...')
+      
+      // Try database as fallback
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -41,61 +147,10 @@ export default function OrdersPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching orders:', error)
-        
-        // Check localStorage for mock orders
-        const mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
-        if (mockOrders.length > 0) {
-          setOrders(mockOrders)
-          return
-        }
-        
-        // Mock orders for demo if no localStorage orders
-        setOrders([
-          {
-            id: 'mock-order-1',
-            order_number: 'MUS-001',
-            status: 'delivered',
-            total_amount: 25000,
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            shipping_address: 'Colombo, Sri Lanka',
-            order_items: [
-              {
-                id: 'item-1',
-                quantity: 1,
-                price: 25000,
-                products: {
-                  id: 1,
-                  name: 'Yamaha Acoustic Guitar',
-                  price: 25000,
-                  product_images: [{ image_url: 'https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?w=400', is_primary: true }]
-                }
-              }
-            ]
-          },
-          {
-            id: 'mock-order-2',
-            order_number: 'MUS-002', 
-            status: 'processing',
-            total_amount: 45000,
-            created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            shipping_address: 'Kandy, Sri Lanka',
-            order_items: [
-              {
-                id: 'item-2',
-                quantity: 1,
-                price: 45000,
-                products: {
-                  id: 2,
-                  name: 'Roland Digital Piano',
-                  price: 45000,
-                  product_images: [{ image_url: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400', is_primary: true }]
-                }
-              }
-            ]
-          }
-        ])
+        console.error('Error fetching orders from database:', error)
+        setOrders([])
       } else {
+        console.log('📊 Database orders:', data)
         setOrders(data || [])
       }
     } catch (error) {
@@ -228,7 +283,9 @@ export default function OrdersPage() {
                           <p className="text-sm text-gray-600">Shipping Address</p>
                           <p className="font-medium flex items-center gap-1">
                             <MapPin className="h-4 w-4 text-gray-400" />
-                            {order.shipping_address}
+                            {typeof order.shipping_address === 'string' 
+                              ? order.shipping_address 
+                              : `${order.shipping_address?.city || 'Unknown City'}, Sri Lanka`}
                           </p>
                         </div>
                       </div>

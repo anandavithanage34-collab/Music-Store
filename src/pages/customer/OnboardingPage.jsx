@@ -228,7 +228,7 @@ export default function OnboardingPage() {
             <Button
               onClick={handleComplete}
               disabled={!allQuestionsAnswered}
-              loading={loading}
+
             >
               Complete Setup
             </Button>

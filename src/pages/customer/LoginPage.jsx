@@ -37,19 +37,17 @@ export default function LoginPage() {
       return
     }
 
-    setLoading(true)
     try {
       const { data, error } = await signIn(formData.email, formData.password)
 
       if (error) {
         setError(error.message)
       } else {
-        navigate(from, { replace: true })
+        // Redirect to home page instead of profile
+        navigate('/', { replace: true })
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -146,8 +144,6 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                loading={loading}
-                disabled={loading}
               >
                 Sign In
               </Button>

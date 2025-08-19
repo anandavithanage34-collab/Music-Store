@@ -10,6 +10,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const { isAuthenticated, profile, signOut } = useAuth()
   const { getCartCount } = useCart()
   const navigate = useNavigate()
@@ -23,15 +24,32 @@ export default function Navbar() {
   }
 
   const handleSignOut = async () => {
+    if (isSigningOut) return // Prevent multiple clicks
+    
+    setIsSigningOut(true)
+    setIsUserMenuOpen(false)
+    
     try {
-      setIsUserMenuOpen(false)
+      // Call signOut function from useAuth
       await signOut()
-      // Show success message
-      alert('✅ Successfully signed out!')
-      navigate('/')
+      
+      // Navigate immediately
+      navigate('/', { replace: true })
+      
+      // Show success message after navigation
+      setTimeout(() => {
+        alert('✅ Successfully signed out!')
+      }, 200)
+      
     } catch (error) {
       console.error('Signout error:', error)
-      alert('❌ Signout failed. Please try again.')
+      // Still redirect to home even if signout has issues
+      navigate('/', { replace: true })
+      setTimeout(() => {
+        alert('❌ Signout failed but redirected to home.')
+      }, 200)
+    } finally {
+      setIsSigningOut(false)
     }
   }
 
@@ -39,7 +57,6 @@ export default function Navbar() {
 
   const navigationItems = [
     { name: 'Collections', href: '/products', hasDropdown: true },
-    { name: 'Instruments', href: '/products', hasDropdown: true },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' }
   ]
@@ -71,18 +88,19 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-10">
-            {navigationItems.map((item) => (
-              <div key={item.name} className="relative group">
-                <Link
-                  to={item.href}
-                  className="flex items-center space-x-1 text-gray-700 hover:text-gray-900 transition-colors duration-300 font-medium py-2"
-                >
-                  <span>{item.name}</span>
-                  {item.hasDropdown && (
-                    <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform duration-300" />
-                  )}
-                </Link>
+          <div className="hidden lg:flex items-center ml-12">
+            <div className="flex items-center space-x-2 bg-gray-100/80 backdrop-blur-sm border border-gray-200/50 rounded-full p-2 hover:bg-gray-50 transition-all duration-300">
+              {navigationItems.map((item) => (
+                <div key={item.name} className="relative group">
+                  <Link
+                    to={item.href}
+                    className="flex items-center space-x-1 text-gray-700 hover:text-white transition-all duration-300 font-medium py-2 px-4 rounded-full hover:bg-gray-900"
+                  >
+                    <span>{item.name}</span>
+                    {item.hasDropdown && (
+                      <ChevronDown className="h-4 w-4 group-hover:rotate-180 transition-transform duration-300" />
+                    )}
+                  </Link>
                 
                 {/* Dropdown Menu */}
                 {item.hasDropdown && (
@@ -109,22 +127,25 @@ export default function Navbar() {
                     </div>
                   </div>
                 )}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Search Bar */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <form onSubmit={handleSearch} className="w-full">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  placeholder="Search for instruments..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-full focus:ring-2 focus:ring-gray-900 focus:border-transparent focus:bg-white transition-all duration-300 text-gray-900 placeholder-gray-500"
-                />
+                <div className="bg-gray-100/80 backdrop-blur-sm border border-gray-200/50 rounded-full p-1 hover:bg-gray-50 transition-all duration-300">
+                  <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    type="text"
+                    placeholder="Search for instruments..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-transparent border-none focus:ring-2 focus:ring-gray-900 focus:outline-none text-gray-900 placeholder-gray-500 rounded-full"
+                  />
+                </div>
               </div>
             </form>
           </div>
@@ -136,7 +157,7 @@ export default function Navbar() {
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative p-3 text-gray-700 hover:text-gray-900 transition-colors duration-300"
+                className="relative p-3 text-gray-700 hover:text-white transition-all duration-300 rounded-full bg-gray-100/50 hover:bg-gray-900 backdrop-blur-sm border border-gray-200/50 hover:border-gray-900"
               >
                 <ShoppingCart className="h-6 w-6" />
                 {cartItemCount > 0 && (
@@ -156,7 +177,7 @@ export default function Navbar() {
               <div className="relative">
                 <button 
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-50 transition-colors duration-300 group"
+                  className="flex items-center space-x-3 p-3 rounded-full hover:bg-gray-900 hover:text-white transition-all duration-300 group bg-gray-100/50 backdrop-blur-sm border border-gray-200/50 hover:border-gray-900"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-gray-900 to-gray-700 rounded-full flex items-center justify-center">
                     <User className="h-4 w-4 text-white" />
@@ -219,10 +240,15 @@ export default function Navbar() {
                       
                       <div className="border-t border-gray-100 py-2">
                         <button
-                          onClick={handleSignOut}
-                          className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleSignOut()
+                          }}
+                          disabled={isSigningOut}
+                          className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Sign Out
+                          {isSigningOut ? 'Signing out...' : 'Sign Out'}
                         </button>
                       </div>
                     </motion.div>
@@ -232,13 +258,13 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center space-x-3">
                 <Link to="/login">
-                  <Button variant="ghost" className="text-gray-700 hover:text-gray-900 font-medium">
+                  <Button variant="ghost" className="text-gray-700 hover:text-white font-medium rounded-full bg-gray-100/50 hover:bg-gray-900 backdrop-blur-sm border border-gray-200/50 hover:border-gray-900 px-6 py-2.5">
                     Sign In
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 rounded-full font-medium">
-                    Sign Up
+                  <Button className="bg-gray-900 hover:bg-gray-800 text-white font-medium px-6 py-2.5 rounded-full shadow-lg">
+                    Get Started
                   </Button>
                 </Link>
               </div>
@@ -297,19 +323,22 @@ export default function Navbar() {
               <div className="border-t border-gray-100 pt-4 mt-4">
                 <p className="text-sm font-medium text-gray-500 mb-3 uppercase tracking-wider">Categories</p>
                 <div className="space-y-3">
-                  <Link to="/products?category=string_instruments" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900">
-                    String Instruments
+                  <Link to="/products?category=guitars_basses" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900 font-medium">
+                    Guitars and Basses
                   </Link>
-                  <Link to="/products?category=wind_instruments" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900">
-                    Wind Instruments
+                  <Link to="/products?category=drums_percussion" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900 font-medium">
+                    Drums and Percussion
                   </Link>
-                  <Link to="/products?category=percussion" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900">
-                    Percussion
+                  <Link to="/products?category=keys" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900 font-medium">
+                    Keys
                   </Link>
-                  <Link to="/products?category=traditional" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900">
+                  <Link to="/products?category=studio_recording" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900 font-medium">
+                    Studio and Recording Equipment
+                  </Link>
+                  <Link to="/products?category=traditional" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900 font-medium">
                     Traditional Sri Lankan
                   </Link>
-                  <Link to="/products?category=accessories" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900">
+                  <Link to="/products?category=accessories" onClick={() => setIsMenuOpen(false)} className="block text-gray-600 hover:text-gray-900 font-medium">
                     Accessories
                   </Link>
                 </div>

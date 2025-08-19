@@ -21,52 +21,19 @@ export default function HomePage() {
 
   const fetchProducts = async () => {
     try {
-      // Try to fetch from Supabase first
-      const { data: featured, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          brands (name),
-          product_images (image_url, is_primary, alt_text),
-          categories (name)
-        `)
-        .eq('is_active', true)
-        .limit(8)
-
-      if (error) {
-        // Use sample data as fallback
-        console.log('Using sample data - Supabase not connected')
-        setFeaturedProducts(sampleProducts)
-        
-        if (profile?.skill_level) {
-          const recommended = sampleProducts.filter(p => 
-            p.suitable_for.includes(profile.skill_level)
-          )
-          setRecommendedProducts(recommended)
-        }
-      } else {
-        setFeaturedProducts(featured || [])
-
-        // Fetch skill-level specific recommendations if user is logged in
-        if (profile?.skill_level) {
-          const { data: recommended } = await supabase
-            .from('products')
-            .select(`
-              *,
-              brands (name),
-              product_images (image_url, is_primary, alt_text),
-              categories (name)
-            `)
-            .contains('suitable_for', [profile.skill_level])
-            .eq('is_active', true)
-            .limit(6)
-
-          setRecommendedProducts(recommended || [])
-        }
+      // Always use hardcoded sample data for consistency
+      setFeaturedProducts(sampleProducts.slice(0, 8))
+      
+      if (profile?.skill_level) {
+        const recommended = sampleProducts.filter(p => 
+          p.suitable_for.includes(profile.skill_level)
+        )
+        setRecommendedProducts(recommended.slice(0, 4))
       }
     } catch (error) {
-      console.error('Error fetching products, using sample data:', error)
-      setFeaturedProducts(sampleProducts)
+      console.error('Error with products setup:', error)
+      setFeaturedProducts(sampleProducts.slice(0, 8))
+      setRecommendedProducts(sampleProducts.slice(0, 4))
     } finally {
       setLoading(false)
     }

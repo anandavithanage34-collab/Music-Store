@@ -13,11 +13,24 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    full_name: profile?.full_name || '',
-    phone: profile?.phone || '',
-    city: profile?.city || '',
-    age: profile?.age || ''
+    full_name: '',
+    phone: '',
+    city: '',
+    age: ''
   })
+  
+  // Update form data when profile changes
+  React.useEffect(() => {
+    if (profile) {
+      const newFormData = {
+        full_name: profile.full_name || '',
+        phone: profile.phone || '',
+        city: profile.city || '',
+        age: profile.age?.toString() || ''
+      }
+      setFormData(newFormData)
+    }
+  }, [profile])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -31,7 +44,6 @@ export default function ProfilePage() {
       return
     }
 
-    setLoading(true)
     try {
       const { error } = await updateProfile({
         full_name: formData.full_name,
@@ -45,11 +57,11 @@ export default function ProfilePage() {
       } else {
         setIsEditing(false)
         setError('')
+        // Show success message
+        alert('✅ Profile updated successfully!')
       }
     } catch (error) {
       setError('An unexpected error occurred')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -97,11 +109,15 @@ export default function ProfilePage() {
                   <div className="mt-4 pt-4 border-t space-y-2 text-sm text-gray-600">
                     <div className="flex items-center justify-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      <span>Member since {new Date(user?.created_at).toLocaleDateString()}</span>
+                      <span>Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Today'}</span>
                     </div>
-                    {profile?.onboarding_completed && (
+                    {profile?.onboarding_completed ? (
                       <div className="text-green-600">
                         ✅ Profile Complete
+                      </div>
+                    ) : (
+                      <div className="text-orange-600">
+                        ⏳ Complete your onboarding
                       </div>
                     )}
                   </div>
@@ -129,7 +145,6 @@ export default function ProfilePage() {
                         variant="outline" 
                         size="sm" 
                         onClick={handleCancel}
-                        disabled={loading}
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
@@ -137,8 +152,6 @@ export default function ProfilePage() {
                       <Button 
                         size="sm" 
                         onClick={handleSave}
-                        loading={loading}
-                        disabled={loading}
                       >
                         <Save className="h-4 w-4 mr-2" />
                         Save

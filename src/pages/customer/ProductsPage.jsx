@@ -36,178 +36,109 @@ export default function ProductsPage() {
     fetchBrands()
   }, [])
 
+  // Update filters when URL parameters change
+  useEffect(() => {
+    setFilters({
+      search: searchParams.get('search') || '',
+      category: searchParams.get('category') || '',
+      brand: searchParams.get('brand') || '',
+      minPrice: searchParams.get('minPrice') || '',
+      maxPrice: searchParams.get('maxPrice') || '',
+      skillLevel: searchParams.get('skillLevel') || '',
+      sortBy: searchParams.get('sortBy') || 'name'
+    })
+  }, [searchParams])
+
   useEffect(() => {
     fetchProducts()
-    updateSearchParams()
   }, [filters])
 
   const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order')
-
-      if (error) {
-        setCategories(sampleCategories)
-      } else {
-        setCategories(data || sampleCategories)
-      }
-    } catch (error) {
-      console.error('Error fetching categories, using sample data:', error)
-      setCategories(sampleCategories)
-    }
+    // Always use hardcoded sample data for consistency
+    setCategories(sampleCategories)
   }
 
   const fetchBrands = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('brands')
-        .select('*')
-        .eq('is_active', true)
-        .order('name')
-
-      if (error) {
-        setBrands(sampleBrands)
-      } else {
-        setBrands(data || sampleBrands)
-      }
-    } catch (error) {
-      console.error('Error fetching brands, using sample data:', error)
-      setBrands(sampleBrands)
-    }
+    // Always use hardcoded sample data for consistency
+    setBrands(sampleBrands)
   }
 
   const fetchProducts = async () => {
     setLoading(true)
-    try {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          brands (name),
-          product_images (image_url, is_primary, alt_text),
-          categories (name, slug)
-        `)
-        .eq('is_active', true)
+    
+    // Always use hardcoded sample data with client-side filtering
+    let filteredProducts = [...sampleProducts]
 
-      // Apply filters (Supabase queries)
-      if (filters.search) {
-        query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
-      }
-
-      if (filters.category) {
-        query = query.eq('categories.slug', filters.category)
-      }
-
-      if (filters.brand) {
-        query = query.eq('brands.name', filters.brand)
-      }
-
-      if (filters.minPrice) {
-        query = query.gte('price', parseFloat(filters.minPrice))
-      }
-
-      if (filters.maxPrice) {
-        query = query.lte('price', parseFloat(filters.maxPrice))
-      }
-
-      if (filters.skillLevel) {
-        query = query.contains('suitable_for', [filters.skillLevel])
-      }
-
-      // Apply sorting
-      switch (filters.sortBy) {
-        case 'price_low':
-          query = query.order('price', { ascending: true })
-          break
-        case 'price_high':
-          query = query.order('price', { ascending: false })
-          break
-        case 'newest':
-          query = query.order('created_at', { ascending: false })
-          break
-        case 'popular':
-          query = query.order('total_sales', { ascending: false })
-          break
-        default:
-          query = query.order('name', { ascending: true })
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        // Use sample data with client-side filtering
-        console.log('Using sample data - Supabase not connected')
-        let filteredProducts = [...sampleProducts]
-
-        if (filters.search) {
-          filteredProducts = filteredProducts.filter(p => 
-            p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-            p.description.toLowerCase().includes(filters.search.toLowerCase())
-          )
-        }
-
-        if (filters.category) {
-          filteredProducts = filteredProducts.filter(p => 
-            p.categories.slug === filters.category
-          )
-        }
-
-        if (filters.brand) {
-          filteredProducts = filteredProducts.filter(p => 
-            p.brands.name === filters.brand
-          )
-        }
-
-        if (filters.minPrice) {
-          filteredProducts = filteredProducts.filter(p => p.price >= parseFloat(filters.minPrice))
-        }
-
-        if (filters.maxPrice) {
-          filteredProducts = filteredProducts.filter(p => p.price <= parseFloat(filters.maxPrice))
-        }
-
-        if (filters.skillLevel) {
-          filteredProducts = filteredProducts.filter(p => 
-            p.suitable_for.includes(filters.skillLevel)
-          )
-        }
-
-        // Client-side sorting
-        switch (filters.sortBy) {
-          case 'price_low':
-            filteredProducts.sort((a, b) => a.price - b.price)
-            break
-          case 'price_high':
-            filteredProducts.sort((a, b) => b.price - a.price)
-            break
-          case 'newest':
-            // Sample data doesn't have created_at, so we'll use name
-            filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
-            break
-          default:
-            filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
-        }
-
-        setProducts(filteredProducts)
-      } else {
-        setProducts(data || [])
-      }
-    } catch (error) {
-      console.error('Error fetching products, using sample data:', error)
-      setProducts(sampleProducts)
-    } finally {
-      setLoading(false)
+    if (filters.search) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        p.description.toLowerCase().includes(filters.search.toLowerCase())
+      )
     }
+
+    if (filters.category) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.categories.slug === filters.category
+      )
+    }
+
+    if (filters.brand) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.brands.name === filters.brand
+      )
+    }
+
+    if (filters.minPrice) {
+      filteredProducts = filteredProducts.filter(p => p.price >= parseFloat(filters.minPrice))
+    }
+
+    if (filters.maxPrice) {
+      filteredProducts = filteredProducts.filter(p => p.price <= parseFloat(filters.maxPrice))
+    }
+
+    if (filters.skillLevel) {
+      filteredProducts = filteredProducts.filter(p => 
+        p.suitable_for.includes(filters.skillLevel)
+      )
+    }
+
+    // Client-side sorting
+    switch (filters.sortBy) {
+      case 'price_low':
+        filteredProducts.sort((a, b) => a.price - b.price)
+        break
+      case 'price_high':
+        filteredProducts.sort((a, b) => b.price - a.price)
+        break
+      case 'newest':
+        filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      case 'popular':
+        filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      default:
+        filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    setProducts(filteredProducts)
+    setLoading(false)
   }
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [key]: value
-    }))
+    }
+    setFilters(newFilters)
+    
+    // Update URL parameters immediately
+    const params = new URLSearchParams()
+    Object.entries(newFilters).forEach(([k, v]) => {
+      if (v && v !== 'name') {
+        params.set(k, v)
+      }
+    })
+    setSearchParams(params)
   }
 
   const clearFilters = () => {
@@ -225,7 +156,7 @@ export default function ProductsPage() {
   const updateSearchParams = () => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
+      if (value && value !== 'name') {
         params.set(key, value)
       }
     })

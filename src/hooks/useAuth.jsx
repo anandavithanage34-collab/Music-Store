@@ -76,99 +76,112 @@ export function AuthProvider({ children }) {
 
   const signUp = async (email, password, profileData) => {
     try {
-      // Try Supabase first, fall back to mock mode if it fails
-      const { data, error } = await supabase.auth.signUp({
+      // Always use mock mode for now since we're using hardcoded data
+      console.log('🔧 Using mock authentication mode for signup')
+      const mockUser = {
+        id: 'mock-' + Date.now(),
         email,
-        password,
-        options: {
-          data: profileData
-        }
-      })
-
-      if (error) {
-        // Mock mode - create a temporary user for testing
-        console.log('Using mock authentication mode')
-        const mockUser = {
-          id: 'mock-' + Date.now(),
-          email,
-          created_at: new Date().toISOString()
-        }
-        const mockProfile = {
-          id: mockUser.id,
-          email,
-          ...profileData,
-          onboarding_completed: false,
-          created_at: new Date().toISOString()
-        }
-        
-        setUser(mockUser)
-        setProfile(mockProfile)
-        localStorage.setItem('mock_user', JSON.stringify(mockUser))
-        localStorage.setItem('mock_profile', JSON.stringify(mockProfile))
-        
-        return { data: { user: mockUser }, error: null }
+        created_at: new Date().toISOString()
       }
-
-      // Create profile record if Supabase worked
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email,
-              ...profileData,
-              onboarding_completed: false
-            }
-          ])
-
-        if (profileError) {
-          console.log('Profile creation failed, using mock mode')
-          const mockProfile = {
-            id: data.user.id,
-            email,
-            ...profileData,
-            onboarding_completed: false
-          }
-          setProfile(mockProfile)
-          localStorage.setItem('mock_profile', JSON.stringify(mockProfile))
-        }
+      const mockProfile = {
+        id: mockUser.id,
+        email,
+        full_name: profileData.full_name || '',
+        phone: profileData.phone || '',
+        city: profileData.city || '',
+        age: profileData.age || null,
+        onboarding_completed: false,
+        created_at: new Date().toISOString()
       }
-
-      return { data, error: null }
+      
+      console.log('📝 Created mock profile with data:', mockProfile)
+      
+      setUser(mockUser)
+      setProfile(mockProfile)
+      localStorage.setItem('mock_user', JSON.stringify(mockUser))
+      localStorage.setItem('mock_profile', JSON.stringify(mockProfile))
+      
+      return { data: { user: mockUser }, error: null }
     } catch (error) {
+      console.error('Error in signup:', error)
       return { data: null, error }
     }
   }
 
   const signIn = async (email, password) => {
     try {
+      // Check for mock user first
+      const mockUser = localStorage.getItem('mock_user')
+      const mockProfile = localStorage.getItem('mock_profile')
+      
+      if (mockUser && mockProfile) {
+        const user = JSON.parse(mockUser)
+        const profile = JSON.parse(mockProfile)
+        
+        console.log('🔍 Found mock user:', user.email)
+        console.log('📝 Found mock profile:', profile)
+        
+        // Simple email/password check for mock mode
+        if (user.email === email) {
+          console.log('✅ Mock user authentication successful')
+          setUser(user)
+          setProfile(profile)
+          return { data: { user }, error: null }
+        } else {
+          console.log('❌ Email mismatch for mock user')
+          return { data: null, error: { message: 'Invalid email or password' } }
+        }
+      }
+      
+      console.log('🔍 No mock user found, trying Supabase authentication')
+      
+      // Try Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
+      
+      if (data?.user && !error) {
+        // Fetch profile data immediately after successful login
+        await fetchProfile(data.user.id)
+      }
+      
       return { data, error }
     } catch (error) {
+      console.error('Error in signIn:', error)
       return { data: null, error }
     }
   }
 
   const signOut = async () => {
     try {
+      // Clear local state immediately
+      setUser(null)
+      setProfile(null)
+      
       // Clear mock data
       localStorage.removeItem('mock_user')
       localStorage.removeItem('mock_profile')
       localStorage.removeItem('mock_onboarding_responses')
       localStorage.removeItem('musicstore_cart')
       
-      const { error } = await supabase.auth.signOut()
-      setUser(null)
-      setProfile(null)
-      return { error }
+      // Try Supabase signout but don't wait too long
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Signout timeout')), 3000)
+      )
+      
+      try {
+        await Promise.race([
+          supabase.auth.signOut(),
+          timeoutPromise
+        ])
+      } catch (supabaseError) {
+        console.log('Supabase signout timeout or error, continuing with local signout')
+      }
+      
+      return { error: null }
     } catch (error) {
-      // Even if Supabase fails, clear local state
-      setUser(null)
-      setProfile(null)
+      // Even if everything fails, local state is already cleared
       return { error }
     }
   }

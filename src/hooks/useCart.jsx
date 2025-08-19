@@ -18,30 +18,25 @@ export function CartProvider({ children }) {
   const { user } = useAuth()
 
   useEffect(() => {
-    if (user) {
-      // When user logs in, try to merge localStorage cart with database cart
+    console.log('🔄 Cart useEffect triggered, user:', user ? user.id : 'not authenticated')
+    
+    // Always load cart from localStorage since we're using hardcoded data
+    const loadLocalCart = async () => {
       const localCart = localStorage.getItem('musicstore_cart')
+      console.log('📦 Loading cart from localStorage:', localCart ? JSON.parse(localCart).length : 0, 'items')
+      
       if (localCart) {
-        const localItems = JSON.parse(localCart)
-        // Merge local cart items with user's cart
-        mergeLocalCartWithDatabase(localItems)
+        const parsedCart = JSON.parse(localCart)
+        const enrichedCart = await enrichLocalCartItems(parsedCart)
+        console.log('✨ Cart loaded with enriched data:', enrichedCart.length, 'items')
+        setCartItems(enrichedCart)
       } else {
-        fetchCartItems()
+        console.log('📭 No cart found in localStorage')
+        setCartItems([])
       }
-    } else {
-      // Load cart from localStorage for non-authenticated users
-      const loadLocalCart = async () => {
-        const localCart = localStorage.getItem('musicstore_cart')
-        if (localCart) {
-          const parsedCart = JSON.parse(localCart)
-          const enrichedCart = await enrichLocalCartItems(parsedCart)
-          setCartItems(enrichedCart)
-        } else {
-          setCartItems([])
-        }
-      }
-      loadLocalCart()
     }
+    
+    loadLocalCart()
   }, [user])
 
   const enrichLocalCartItems = async (localItems) => {
@@ -198,72 +193,32 @@ export function CartProvider({ children }) {
         return { success: true }
       }
 
-      // Add to database for authenticated users - with fallback to localStorage
-      try {
-        // First check if item already exists
-        const { data: existingItem, error: selectError } = await supabase
-          .from('cart_items')
-          .select('quantity')
-          .eq('user_id', user.id)
-          .eq('product_id', productId)
-          .single()
-
-        if (selectError && selectError.code !== 'PGRST116') {
-          throw selectError
-        }
-
-        if (existingItem) {
-          // Update existing item by adding to current quantity
-          const { error: updateError } = await supabase
-            .from('cart_items')
-            .update({ quantity: existingItem.quantity + quantity })
-            .eq('user_id', user.id)
-            .eq('product_id', productId)
-
-          if (updateError) throw updateError
-        } else {
-          // Insert new item
-          const { error: insertError } = await supabase
-            .from('cart_items')
-            .insert({
-              user_id: user.id,
-              product_id: productId,
-              quantity
-            })
-
-          if (insertError) throw insertError
-        }
-
-        await fetchCartItems()
-        console.log(`✅ Database cart updated successfully for authenticated user`)
-        return { success: true }
-      } catch (dbError) {
-        console.log('⚠️ Database operation failed, falling back to localStorage for authenticated user:', dbError)
-        
-        // Fallback to localStorage if database fails (even for authenticated users)
-        const localCart = JSON.parse(localStorage.getItem('musicstore_cart') || '[]')
-        const existingItem = localCart.find(item => item.product_id === productId)
-        
-        if (existingItem) {
-          existingItem.quantity += quantity
-        } else {
-          localCart.push({ 
-            product_id: productId, 
-            quantity,
-            // Store additional info for authenticated users in localStorage
-            user_id: user.id,
-            added_at: new Date().toISOString()
-          })
-        }
-        
-        localStorage.setItem('musicstore_cart', JSON.stringify(localCart))
-        // Enrich cart items for authenticated users too
-        enrichLocalCartItems(localCart).then(enrichedCart => {
-          setCartItems(enrichedCart)
-          console.log(`🎯 Fallback cart updated successfully. Total items: ${localCart.length}`)
+      // For authenticated users, always use localStorage for now (since we're using hardcoded data)
+      console.log('🔐 Authenticated user - using localStorage cart')
+      const localCart = JSON.parse(localStorage.getItem('musicstore_cart') || '[]')
+      const existingItem = localCart.find(item => item.product_id === productId)
+      
+      if (existingItem) {
+        existingItem.quantity += quantity
+        console.log(`📦 Updated existing item quantity to ${existingItem.quantity}`)
+      } else {
+        localCart.push({ 
+          product_id: productId, 
+          quantity,
+          user_id: user.id,
+          added_at: new Date().toISOString()
         })
-        return { success: true }
+        console.log(`✨ Added new item to cart`)
       }
+      
+      localStorage.setItem('musicstore_cart', JSON.stringify(localCart))
+      
+      // Enrich and update cart state immediately
+      const enrichedCart = await enrichLocalCartItems(localCart)
+      setCartItems(enrichedCart)
+      console.log(`🎯 Cart updated successfully for authenticated user. Total items: ${localCart.length}`)
+      
+      return { success: true }
     } catch (error) {
       console.error('Error adding to cart:', error)
       return { success: false, error }
@@ -271,37 +226,33 @@ export function CartProvider({ children }) {
   }
 
   const updateCartItem = async (productId, quantity) => {
+    console.log(`🔄 Updating cart item: Product ${productId}, Quantity ${quantity}, User: ${user ? 'authenticated' : 'guest'}`)
+    
     try {
-      if (!user) {
-        const localCart = JSON.parse(localStorage.getItem('musicstore_cart') || '[]')
-        const itemIndex = localCart.findIndex(item => item.product_id === productId)
-        
-        if (itemIndex >= 0) {
-          if (quantity <= 0) {
-            localCart.splice(itemIndex, 1)
-          } else {
-            localCart[itemIndex].quantity = quantity
-          }
+      // Always use localStorage for cart operations since we're using hardcoded data
+      const localCart = JSON.parse(localStorage.getItem('musicstore_cart') || '[]')
+      const itemIndex = localCart.findIndex(item => item.product_id == productId) // Use == for type flexibility
+      
+      if (itemIndex >= 0) {
+        if (quantity <= 0) {
+          console.log('🗑️ Removing item due to zero quantity')
+          localCart.splice(itemIndex, 1)
+        } else {
+          console.log(`📝 Updating quantity from ${localCart[itemIndex].quantity} to ${quantity}`)
+          localCart[itemIndex].quantity = quantity
         }
-        
-        localStorage.setItem('musicstore_cart', JSON.stringify(localCart))
-        setCartItems(localCart)
-        return { success: true }
+      } else {
+        console.log('❌ Item not found in cart for update')
+        return { success: false, error: 'Item not found in cart' }
       }
-
-      if (quantity <= 0) {
-        return await removeFromCart(productId)
-      }
-
-      const { error } = await supabase
-        .from('cart_items')
-        .update({ quantity })
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-
-      if (error) throw error
-
-      await fetchCartItems()
+      
+      localStorage.setItem('musicstore_cart', JSON.stringify(localCart))
+      
+      // Enrich and update cart state
+      const enrichedCart = await enrichLocalCartItems(localCart)
+      setCartItems(enrichedCart)
+      console.log('✅ Cart updated successfully')
+      
       return { success: true }
     } catch (error) {
       console.error('Error updating cart item:', error)
@@ -310,24 +261,27 @@ export function CartProvider({ children }) {
   }
 
   const removeFromCart = async (productId) => {
+    console.log(`🗑️ Removing from cart: Product ${productId}, User: ${user ? 'authenticated' : 'guest'}`)
+    
     try {
-      if (!user) {
-        const localCart = JSON.parse(localStorage.getItem('musicstore_cart') || '[]')
-        const filteredCart = localCart.filter(item => item.product_id !== productId)
-        localStorage.setItem('musicstore_cart', JSON.stringify(filteredCart))
-        setCartItems(filteredCart)
-        return { success: true }
+      // Always use localStorage for cart operations since we're using hardcoded data
+      const localCart = JSON.parse(localStorage.getItem('musicstore_cart') || '[]')
+      const originalLength = localCart.length
+      const filteredCart = localCart.filter(item => item.product_id != productId) // Use != for type flexibility
+      
+      if (filteredCart.length === originalLength) {
+        console.log('❌ Item not found in cart for removal')
+        return { success: false, error: 'Item not found in cart' }
       }
-
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('product_id', productId)
-
-      if (error) throw error
-
-      await fetchCartItems()
+      
+      console.log(`📤 Removed item. Cart size: ${originalLength} -> ${filteredCart.length}`)
+      localStorage.setItem('musicstore_cart', JSON.stringify(filteredCart))
+      
+      // Enrich and update cart state
+      const enrichedCart = await enrichLocalCartItems(filteredCart)
+      setCartItems(enrichedCart)
+      console.log('✅ Item removed successfully')
+      
       return { success: true }
     } catch (error) {
       console.error('Error removing from cart:', error)

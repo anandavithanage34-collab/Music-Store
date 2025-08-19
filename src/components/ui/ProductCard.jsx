@@ -21,19 +21,21 @@ export default function ProductCard({ product, className }) {
   const handleAddToCart = async (e) => {
     e.preventDefault()
     e.stopPropagation()
-    setAddingToCart(true)
     setAddToCartSuccess(false)
     
     try {
       const result = await addToCart(product.id, 1)
+      
       if (result.success) {
         setAddToCartSuccess(true)
         setTimeout(() => setAddToCartSuccess(false), 2000)
+      } else {
+        console.error('❌ Failed to add to cart:', result.error)
+        alert('❌ Failed to add item to cart. Please try again.')
       }
     } catch (error) {
       console.error('Failed to add to cart:', error)
-    } finally {
-      setAddingToCart(false)
+      alert('❌ Failed to add item to cart. Please try again.')
     }
   }
 
@@ -182,8 +184,6 @@ export default function ProductCard({ product, className }) {
                   : 'bg-gray-900 hover:bg-gray-800 text-white'
               }`}
               size="sm"
-              loading={addingToCart}
-              disabled={addingToCart}
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               {addToCartSuccess ? 'Added to Cart!' : 'Add to Cart'}

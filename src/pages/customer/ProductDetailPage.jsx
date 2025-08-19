@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
 import { formatPrice, getSkillLevelColor } from '../../lib/utils'
-import { supabase } from '../../lib/supabase'
+import { sampleProducts } from '../../lib/sampleData'
 
 export default function ProductDetailPage() {
   const { id } = useParams()
@@ -28,62 +28,43 @@ export default function ProductDetailPage() {
 
   const fetchProduct = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          brands (name, description, country_origin),
-          product_images (image_url, is_primary, alt_text),
-          categories (name, slug),
-          inventory (quantity_available)
-        `)
-        .eq('id', id)
-        .eq('is_active', true)
-        .single()
-
-      if (error) throw error
-
-      setProduct(data)
+      // Always use hardcoded sample data - find product by ID
+      const foundProduct = sampleProducts.find(p => p.id === id)
+      
+      if (foundProduct) {
+        setProduct(foundProduct)
+      } else {
+        setProduct(null)
+      }
     } catch (error) {
       console.error('Error fetching product:', error)
+      setProduct(null)
     } finally {
       setLoading(false)
     }
   }
 
   const fetchReviews = async () => {
-    try {
-      const { data } = await supabase
-        .from('reviews')
-        .select(`
-          *,
-          profiles (full_name)
-        `)
-        .eq('product_id', id)
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false })
-
-      setReviews(data || [])
-    } catch (error) {
-      console.error('Error fetching reviews:', error)
-    }
+    // For now, use empty reviews array since we're using hardcoded data
+    // In a real app, this would fetch from the database
+    setReviews([])
   }
 
   const [addToCartSuccess, setAddToCartSuccess] = useState(false)
 
   const handleAddToCart = async () => {
-    setAddingToCart(true)
     try {
       const result = await addToCart(product.id, quantity)
       if (result.success) {
         setAddToCartSuccess(true)
         // Clear success message after 3 seconds
         setTimeout(() => setAddToCartSuccess(false), 3000)
+      } else {
+        alert('❌ Failed to add item to cart. Please try again.')
       }
     } catch (error) {
       console.error('Failed to add to cart:', error)
-    } finally {
-      setAddingToCart(false)
+      alert('❌ Failed to add item to cart. Please try again.')
     }
   }
 
@@ -279,10 +260,9 @@ export default function ProductDetailPage() {
 
                 <Button
                   onClick={handleAddToCart}
-                  className="flex-1"
+                  className={`flex-1 ${addToCartSuccess ? 'bg-green-600 hover:bg-green-700' : ''}`}
                   size="lg"
                   disabled={!isInStock}
-                  loading={addingToCart}
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {addToCartSuccess ? 'Added to Cart!' : 'Add to Cart'}
