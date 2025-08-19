@@ -1,254 +1,327 @@
-import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Music } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
-import { useAuth } from '../../hooks/useAuth'
-import { calculateSkillLevel } from '../../lib/utils'
-
-const onboardingQuestions = [
-  {
-    id: 1,
-    question: "How long have you been playing musical instruments?",
-    options: [
-      { text: "I'm completely new to music", points: { beginner: 5, intermediate: 0, professional: 0 } },
-      { text: "Less than 1 year", points: { beginner: 4, intermediate: 1, professional: 0 } },
-      { text: "1-3 years", points: { beginner: 2, intermediate: 4, professional: 0 } },
-      { text: "3-7 years", points: { beginner: 0, intermediate: 3, professional: 2 } },
-      { text: "7+ years", points: { beginner: 0, intermediate: 1, professional: 5 } }
-    ]
-  },
-  {
-    id: 2,
-    question: "What best describes your musical goals?",
-    options: [
-      { text: "Learn to play for fun and relaxation", points: { beginner: 5, intermediate: 1, professional: 0 } },
-      { text: "Play with friends and family", points: { beginner: 3, intermediate: 3, professional: 0 } },
-      { text: "Join a band or perform locally", points: { beginner: 1, intermediate: 4, professional: 1 } },
-      { text: "Pursue music professionally or teach", points: { beginner: 0, intermediate: 2, professional: 4 } },
-      { text: "Already performing/teaching professionally", points: { beginner: 0, intermediate: 0, professional: 5 } }
-    ]
-  },
-  {
-    id: 3,
-    question: "How comfortable are you with music theory?",
-    options: [
-      { text: "I don't know any music theory", points: { beginner: 5, intermediate: 0, professional: 0 } },
-      { text: "I know basic notes and chords", points: { beginner: 3, intermediate: 2, professional: 0 } },
-      { text: "I understand scales and key signatures", points: { beginner: 1, intermediate: 4, professional: 1 } },
-      { text: "I'm comfortable with advanced theory", points: { beginner: 0, intermediate: 2, professional: 3 } },
-      { text: "I can analyze and compose complex pieces", points: { beginner: 0, intermediate: 0, professional: 5 } }
-    ]
-  },
-  {
-    id: 4,
-    question: "What's your experience with different instruments?",
-    options: [
-      { text: "I've never played any instrument", points: { beginner: 5, intermediate: 0, professional: 0 } },
-      { text: "I play one instrument at a basic level", points: { beginner: 4, intermediate: 1, professional: 0 } },
-      { text: "I play 1-2 instruments reasonably well", points: { beginner: 1, intermediate: 4, professional: 1 } },
-      { text: "I play multiple instruments competently", points: { beginner: 0, intermediate: 2, professional: 3 } },
-      { text: "I'm proficient in many instruments", points: { beginner: 0, intermediate: 0, professional: 5 } }
-    ]
-  },
-  {
-    id: 5,
-    question: "What's your budget range for musical instruments?",
-    options: [
-      { text: "Under LKR 25,000 (starter instruments)", points: { beginner: 4, intermediate: 1, professional: 0 } },
-      { text: "LKR 25,000 - 75,000 (quality beginner to intermediate)", points: { beginner: 3, intermediate: 3, professional: 0 } },
-      { text: "LKR 75,000 - 200,000 (professional quality)", points: { beginner: 1, intermediate: 3, professional: 2 } },
-      { text: "LKR 200,000 - 500,000 (high-end instruments)", points: { beginner: 0, intermediate: 1, professional: 4 } },
-      { text: "Over LKR 500,000 (premium/vintage instruments)", points: { beginner: 0, intermediate: 0, professional: 5 } }
-    ]
-  }
-]
+import { Card } from '../../components/ui/Card'
+import { Loader2 } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
 export default function OnboardingPage() {
+  const [currentStep, setCurrentStep] = useState('intro') // 'intro', 'questions', 'complete'
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState({})
   const [loading, setLoading] = useState(false)
-  const { completeOnboarding } = useAuth()
+  const [onboardingQuestions, setOnboardingQuestions] = useState([])
+  const [skillLevel, setSkillLevel] = useState(null)
+  
   const navigate = useNavigate()
 
-  const handleAnswerSelect = (questionId, option) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: option
-    }))
-  }
-
-  const handleNext = () => {
-    if (currentQuestion < onboardingQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1)
-    }
-  }
-
-  const handleComplete = async () => {
-    console.log('🎯 Starting onboarding completion...')
-    console.log('Current answers:', answers)
-    setLoading(true)
-    
+  // Fetch questions from database
+  const fetchOnboardingQuestions = async () => {
     try {
-      // Calculate skill level based on answers
-      const responses = Object.entries(answers).map(([questionId, option]) => ({
-        question_id: questionId,
-        answer: option.text,
-        points_beginner: option.points.beginner,
-        points_intermediate: option.points.intermediate,
-        points_professional: option.points.professional
-      }))
-
-      console.log('📊 Calculated responses:', responses)
-      const skillLevel = calculateSkillLevel(responses)
-      console.log('🎵 Determined skill level:', skillLevel)
-
-      const result = await completeOnboarding(skillLevel, responses)
-      console.log('✅ Onboarding result:', result)
-
-      if (result?.error) {
-        console.error('❌ Onboarding error:', result.error)
-        alert('There was an issue completing your setup. Please try again.')
+      setLoading(true)
+      console.log('📥 Fetching onboarding questions from database...')
+      
+      const { data, error } = await supabase
+        .from('onboarding_questions')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order')
+      
+      if (error) {
+        console.error('❌ Error fetching questions:', error)
+        setOnboardingQuestions([])
       } else {
-        console.log('🚀 Onboarding successful! Redirecting to homepage...')
-        navigate('/')
+        console.log('✅ Questions fetched successfully:', data)
+        setOnboardingQuestions(data)
       }
     } catch (error) {
-      console.error('❌ Onboarding error:', error)
-      alert('There was an issue completing your setup. Please try again.')
+      console.error('❌ Error in fetchOnboardingQuestions:', error)
+      setOnboardingQuestions([])
     } finally {
       setLoading(false)
     }
   }
 
-  const currentQuestionData = onboardingQuestions[currentQuestion]
-  const selectedAnswer = answers[currentQuestionData.id]
-  const isLastQuestion = currentQuestion === onboardingQuestions.length - 1
-  const allQuestionsAnswered = Object.keys(answers).length === onboardingQuestions.length
+  useEffect(() => {
+    fetchOnboardingQuestions()
+  }, [])
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="max-w-2xl w-full"
-      >
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center space-x-2 mb-6">
-            <Music className="h-10 w-10 text-primary-600" />
-            <span className="text-2xl font-bold text-gray-900 font-heading">Music Store LK</span>
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Let's Personalize Your Experience</h1>
-          <p className="text-gray-600">
-            Answer a few questions so we can recommend the perfect instruments for your skill level
-          </p>
-          
-          {/* Progress Bar */}
-          <div className="mt-6 bg-gray-200 rounded-full h-2 max-w-md mx-auto">
-            <motion.div
-              className="bg-primary-600 h-2 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${((currentQuestion + 1) / onboardingQuestions.length) * 100}%` }}
-              transition={{ duration: 0.3 }}
-            />
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Question {currentQuestion + 1} of {onboardingQuestions.length}
-          </p>
-        </div>
+  const handleAnswer = (questionId, answer) => {
+    console.log('📝 Answer selected:', { questionId, answer })
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }))
+  }
 
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-center text-xl">
-              {currentQuestionData.question}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentQuestion}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-3"
+  const nextQuestion = () => {
+    if (currentQuestion < onboardingQuestions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1)
+    } else {
+      // All questions answered, calculate skill level and complete
+      completeOnboardingFlow()
+    }
+  }
+
+  const completeOnboardingFlow = () => {
+    // Calculate skill level from answers
+    const totalPoints = { beginner: 0, intermediate: 0, professional: 0 }
+    
+    Object.values(answers).forEach(answer => {
+      if (answer && answer.points) {
+        totalPoints.beginner += answer.points.beginner || 0
+        totalPoints.intermediate += answer.points.intermediate || 0
+        totalPoints.professional += answer.points.professional || 0
+      }
+    })
+    
+    let calculatedSkillLevel = 'beginner'
+    if (totalPoints.professional > totalPoints.beginner && totalPoints.professional > totalPoints.intermediate) {
+      calculatedSkillLevel = 'professional'
+    } else if (totalPoints.intermediate > totalPoints.beginner) {
+      calculatedSkillLevel = 'intermediate'
+    }
+
+    console.log('🎯 Calculated skill level:', calculatedSkillLevel)
+    console.log('📊 Points breakdown:', totalPoints)
+    
+    // Store onboarding data in localStorage to be used during registration
+    const onboardingData = {
+      answers,
+      skillLevel: calculatedSkillLevel,
+      questions: onboardingQuestions,
+      totalPoints,
+      completedAt: new Date().toISOString()
+    }
+    
+    localStorage.setItem('onboardingData', JSON.stringify(onboardingData))
+    console.log('💾 Onboarding data stored in localStorage')
+    
+    setSkillLevel(calculatedSkillLevel)
+    setCurrentStep('complete')
+  }
+
+  const previousQuestion = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1)
+    }
+  }
+
+  // Step 1: Introduction
+  if (currentStep === 'intro') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="p-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+              </div>
+              
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                Musical Assessment
+              </h1>
+              <p className="text-gray-600 mb-8">
+                Let's understand your musical background to provide personalized instrument recommendations. 
+                This will take about 2-3 minutes.
+              </p>
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                  <span className="flex items-center">
+                    <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold mr-2">5</span>
+                    Quick Questions
+                  </span>
+                  <span className="flex items-center">
+                    <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold mr-2">📊</span>
+                    Skill Analysis
+                  </span>
+                  <span className="flex items-center">
+                    <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold mr-2">🎯</span>
+                    Personalized Results
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => setCurrentStep('questions')}
+                size="lg"
+                disabled={loading || onboardingQuestions.length === 0}
               >
-                {currentQuestionData.options.map((option, index) => (
-                  <motion.button
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Loading Questions...
+                  </>
+                ) : onboardingQuestions.length === 0 ? (
+                  'No Questions Available'
+                ) : (
+                  'Start Assessment'
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Step 2: Questions
+  if (currentStep === 'questions' && onboardingQuestions.length > 0) {
+    const question = onboardingQuestions[currentQuestion]
+    const selectedAnswer = answers[question.id]
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="p-8">
+            {/* Progress Bar */}
+            <div className="mb-8">
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Question {currentQuestion + 1} of {onboardingQuestions.length}</span>
+                <span>{Math.round(((currentQuestion + 1) / onboardingQuestions.length) * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentQuestion + 1) / onboardingQuestions.length) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Question */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                {question.question}
+              </h2>
+              
+              <div className="space-y-3">
+                {question.options.map((option, index) => (
+                  <button
                     key={index}
-                    onClick={() => handleAnswerSelect(currentQuestionData.id, option)}
+                    onClick={() => handleAnswer(question.id, option)}
                     className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 ${
                       selectedAnswer?.text === option.text
-                        ? 'border-primary-500 bg-primary-50 text-primary-900'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-purple-500 bg-purple-50 text-purple-900'
+                        : 'border-gray-200 hover:border-purple-300 hover:bg-purple-25'
                     }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                        selectedAnswer?.text === option.text
+                          ? 'border-purple-500 bg-purple-500'
+                          : 'border-gray-300'
+                      }`}>
+                        {selectedAnswer?.text === option.text && (
+                          <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                        )}
+                      </div>
                       <span className="font-medium">{option.text}</span>
-                      {selectedAnswer?.text === option.text && (
-                        <div className="w-4 h-4 bg-primary-600 rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                        </div>
-                      )}
                     </div>
-                  </motion.button>
+                  </button>
                 ))}
-              </motion.div>
-            </AnimatePresence>
-          </CardContent>
-        </Card>
+              </div>
+            </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentQuestion === 0}
-            className={currentQuestion === 0 ? 'invisible' : ''}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-
-          <div className="text-sm text-gray-500">
-            {currentQuestion + 1} / {onboardingQuestions.length}
-          </div>
-
-          {isLastQuestion ? (
-            <Button
-              onClick={handleComplete}
-              disabled={!allQuestionsAnswered}
-
-            >
-              Complete Setup
-            </Button>
-          ) : (
-            <Button
-              onClick={handleNext}
-              disabled={!selectedAnswer}
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
+            {/* Navigation */}
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={previousQuestion}
+                disabled={currentQuestion === 0}
+              >
+                Previous
+              </Button>
+              
+              <Button
+                onClick={nextQuestion}
+                disabled={!selectedAnswer}
+              >
+                {currentQuestion === onboardingQuestions.length - 1 ? 'Complete Assessment' : 'Next Question'}
+              </Button>
+            </div>
+          </Card>
         </div>
+      </div>
+    )
+  }
 
-        <div className="text-center mt-6">
-          <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
-            Skip for now (you can complete this later)
-          </Link>
+  // Step 3: Completion
+  if (currentStep === 'complete') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="p-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                Assessment Complete!
+              </h1>
+              
+              <div className="mb-6">
+                <p className="text-gray-600 mb-4">
+                  Based on your responses, we've determined your skill level:
+                </p>
+                <div className={`inline-block px-6 py-3 rounded-full text-lg font-semibold ${
+                  skillLevel === 'professional' ? 'bg-purple-100 text-purple-800' :
+                  skillLevel === 'intermediate' ? 'bg-blue-100 text-blue-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {skillLevel === 'professional' ? '🎼 Professional' :
+                   skillLevel === 'intermediate' ? '🎵 Intermediate' :
+                   '🎶 Beginner'}
+                </div>
+              </div>
+
+              <p className="text-gray-600 mb-8">
+                Now let's create your account to get personalized instrument recommendations!
+              </p>
+
+              <div className="space-y-4">
+                <Button
+                  onClick={() => navigate('/register')}
+                  size="lg"
+                  className="w-full"
+                >
+                  Create Account
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCurrentStep('intro')
+                    setCurrentQuestion(0)
+                    setAnswers({})
+                    setSkillLevel(null)
+                  }}
+                  className="w-full"
+                >
+                  Retake Assessment
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
-      </motion.div>
+      </div>
+    )
+  }
+
+  // Loading state
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
+      <Card className="p-8">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-purple-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading assessment...</p>
+        </div>
+      </Card>
     </div>
   )
 }

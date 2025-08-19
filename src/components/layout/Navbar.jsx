@@ -79,7 +79,7 @@ export default function Navbar() {
             </motion.div>
             <div className="flex flex-col">
               <span className="text-xl font-bold text-gray-900 font-heading leading-tight">
-                Music Store
+                Harmony House
               </span>
               <span className="text-xs text-gray-500 font-light tracking-wider uppercase">
                 Sri Lanka
@@ -218,6 +218,15 @@ export default function Navbar() {
                         >
                           My Orders
                         </Link>
+                        {!profile?.onboarding_completed && (
+                          <Link 
+                            to="/onboarding" 
+                            onClick={() => setIsUserMenuOpen(false)}
+                            className="block px-4 py-3 text-sm text-orange-600 hover:bg-orange-50 hover:text-orange-700 transition-colors font-medium"
+                          >
+                            🎯 Complete Assessment
+                          </Link>
+                        )}
                         {profile?.role === 'admin' && (
                           <Link 
                             to="/admin" 
@@ -262,7 +271,7 @@ export default function Navbar() {
                     Sign In
                   </Button>
                 </Link>
-                <Link to="/register">
+                <Link to="/onboarding">
                   <Button className="bg-gray-900 hover:bg-gray-800 text-white font-medium px-6 py-2.5 rounded-full shadow-lg">
                     Get Started
                   </Button>

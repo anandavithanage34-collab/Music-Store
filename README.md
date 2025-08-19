@@ -1,132 +1,135 @@
-# Music Store Sri Lanka 🎵
+# Harmony House - Sri Lankan Music Store
 
-A modern, responsive e-commerce website for a Sri Lankan musical instrument store built with React, Tailwind CSS, and Supabase.
+A modern e-commerce platform for musical instruments, built with React, Tailwind CSS, and Supabase.
 
 ## Features
 
-### Customer Features
-- **User Registration & Login** with skill level assessment
-- **Personalized Onboarding** - 5 questions to determine skill level (Beginner/Intermediate/Professional)
-- **Product Browsing** with advanced search and filtering
-- **Shopping Cart** with persistent storage
-- **Secure Checkout** with Cash on Delivery
-- **Product Reviews** from verified buyers
-- **Personalized Recommendations** based on skill level
-
-### Admin Features
-- **Product Management** - Add, update, remove instruments
-- **Order Management** - View and update order status
-- **Customer Management** - View customer accounts
-- **Inventory Management** - Track stock levels
-- **Review Moderation** - Approve/reject customer reviews
-
-### Staff Features
-- **Order Processing** - Update order status
-- **Inventory Updates** - Manage stock availability
+- **User Authentication**: Complete signup, signin, and profile management
+- **Onboarding System**: Skill assessment to personalize user experience
+- **Product Catalog**: Browse musical instruments by category and skill level
+- **Shopping Cart**: Add items and manage cart
+- **User Profiles**: Manage personal information and preferences
+- **Responsive Design**: Mobile-first approach with modern UI/UX
 
 ## Tech Stack
 
-- **Frontend**: React 19, Vite, Tailwind CSS
-- **UI Components**: Radix UI primitives, shadcn/ui style
-- **Animations**: Framer Motion
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **Forms**: React Hook Form with Zod validation
-- **Routing**: React Router v6
+- **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **State Management**: React Context + Hooks
+- **Styling**: Tailwind CSS with custom design system
 
-## Setup Instructions
+## Getting Started
 
-### 1. Install Dependencies
-\`\`\`bash
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+- Supabase account
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd MusicWeb
+```
+
+2. Install dependencies:
+```bash
 npm install
-\`\`\`
+```
 
-### 2. Configure Supabase
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. In your Supabase dashboard, go to the SQL Editor
-3. Run the complete SQL script from \`supabase-setup.sql\` to create all tables and sample data
-4. Get your project URL and anon key from Settings > API
-5. Update \`src/lib/supabase.js\` with your credentials:
+3. Set up environment variables:
+Create a `.env.local` file in the root directory:
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-\`\`\`javascript
-const supabaseUrl = 'YOUR_SUPABASE_URL'
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'
-\`\`\`
-
-### 3. Run the Development Server
-\`\`\`bash
+4. Start the development server:
+```bash
 npm run dev
-\`\`\`
+```
 
-The application will be available at \`http://localhost:5173\`
+The app will be available at `http://localhost:5173`
+
+## Authentication Flow
+
+### Signup Process
+1. User fills out registration form with personal details
+2. Account is created in Supabase Auth
+3. Profile is created in the `profiles` table
+4. User is redirected to onboarding for skill assessment
+5. Onboarding responses are saved to `onboarding_responses` table
+6. Profile is updated with skill level and completion status
+
+### Signin Process
+1. User enters email and password
+2. Supabase authenticates the user
+3. User profile is fetched from the database
+4. If no profile exists, one is automatically created
+5. User is redirected to the homepage with full profile data
+
+### Data Persistence
+- All user data is stored in Supabase PostgreSQL database
+- User profiles persist across sessions
+- Onboarding responses are permanently stored
+- Authentication state is managed by Supabase Auth
 
 ## Database Schema
 
 The application uses the following main tables:
-- **profiles** - User information with Sri Lankan specific fields
-- **categories** - Product categories (String, Wind, Percussion, etc.)
-- **brands** - Musical instrument brands
-- **products** - Musical instruments and accessories
-- **product_images** - Product photos
-- **inventory** - Stock management
-- **cart_items** - Shopping cart storage
-- **orders** - Customer orders
-- **order_items** - Individual order line items
-- **reviews** - Customer product reviews
-- **onboarding_questions** - Skill assessment questions
-- **onboarding_responses** - User skill assessment responses
 
-## Key Features Implementation
+- **profiles**: User profile information and preferences
+- **onboarding_questions**: Skill assessment questions
+- **onboarding_responses**: User responses to assessment questions
+- **products**: Musical instruments and accessories
+- **categories**: Product categories
+- **brands**: Musical instrument brands
 
-### Skill Level Assessment
-- 5 onboarding questions determine user skill level
-- Personalized product recommendations
-- Skill-appropriate product filtering
+## Testing the Authentication
 
-### Sri Lankan Localization
-- LKR currency formatting
-- Sri Lankan cities dropdown
-- Local delivery information
-- Traditional instrument categories
+1. **Create a new account**:
+   - Navigate to `/register`
+   - Fill out the form with valid information
+   - Submit to create account
+   - Check your email for confirmation
 
-### Modern UI/UX
-- Responsive design for all devices
-- Smooth animations with Framer Motion
-- Loading states and error handling
-- Accessibility features
+2. **Sign in with existing account**:
+   - Navigate to `/login`
+   - Use the email and password from registration
+   - You should be redirected to the homepage
 
-## Development Notes
+3. **Complete onboarding**:
+   - After signup, you'll be redirected to `/onboarding`
+   - Answer the skill assessment questions
+   - Your skill level will be determined and saved
 
-### Authentication Setup
-The Supabase MCP authentication needs to be configured properly. If you encounter authentication issues:
+4. **View profile**:
+   - Navigate to `/profile` to see your information
+   - All data should persist after signing out and back in
 
-1. Set environment variable: \`SUPABASE_ACCESS_TOKEN=your_token\`
-2. Or configure in Cursor MCP settings with the access token
-3. Restart Cursor after setting the token
+## Troubleshooting
 
-### Sample Data
-The SQL script includes sample products, categories, and brands to get you started. You can modify or add more data as needed.
+### Common Issues
 
-### Admin Account
-After running the SQL script:
-1. Sign up for an account through the website
-2. In Supabase SQL Editor, run: \`UPDATE profiles SET role = 'admin' WHERE email = 'your-email@example.com';\`
+1. **Profile not loading after signin**:
+   - Check browser console for errors
+   - Verify Supabase connection
+   - Ensure RLS policies are properly configured
 
-## File Structure
+2. **Onboarding questions not loading**:
+   - Verify `onboarding_questions` table has data
+   - Check Supabase permissions
 
-\`\`\`
-src/
-├── components/
-│   ├── ui/              # Reusable UI components
-│   ├── layout/          # Layout components (Navbar, Footer)
-│   └── features/        # Feature-specific components
-├── pages/
-│   ├── customer/        # Customer-facing pages
-│   └── admin/           # Admin dashboard pages
-├── hooks/               # Custom React hooks
-├── lib/                 # Utilities and configurations
-├── types/               # Type definitions
-└── utils/               # Helper functions
-\`\`\`
+3. **Authentication errors**:
+   - Verify environment variables are correct
+   - Check Supabase project settings
+   - Ensure email confirmation is enabled if required
+
+### Debug Mode
+
+Enable debug logging by checking the browser console. The authentication system includes comprehensive logging for troubleshooting.
 
 ## Contributing
 
@@ -138,8 +141,4 @@ src/
 
 ## License
 
-This project is licensed under the ISC License.
-
----
-
-Built with ❤️ for the Sri Lankan music community
+This project is licensed under the MIT License.

@@ -89,7 +89,7 @@ export default function HomePage() {
                   transition={{ delay: 0.3, duration: 0.6 }}
                   className="text-secondary-400 font-medium tracking-wider uppercase text-sm"
                 >
-                  Sri Lanka's Premier Music Store
+                  Sri Lanka's Premier Music Store - Harmony House
                 </motion.p>
                 <h1 className="text-5xl lg:text-7xl font-bold font-heading leading-tight">
                   Craft Your
@@ -144,20 +144,15 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex justify-center">
                       <Link to="/products">
-                        <Button className="elegant-button text-lg px-10 py-4">
-                          Discover Collection
+                        <Button className="bg-white text-gray-900 hover:bg-gray-100 text-lg px-10 py-4 rounded-full font-medium transition-all duration-300 transform hover:scale-105">
+                          Browse Collection
                           <ArrowRight className="ml-3 h-5 w-5" />
                         </Button>
                       </Link>
-                      <Link to="/register">
-                        <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 px-8 py-4 rounded-full">
-                          Join Our Community
-                        </Button>
-                      </Link>
                     </div>
-                    <p className="text-sm text-gray-300 font-light">
+                    <p className="text-sm text-white font-light">
                       Join 10,000+ musicians who trust us for their musical journey
                     </p>
                   </div>
@@ -221,7 +216,7 @@ export default function HomePage() {
               Excellence in Every Note
             </p>
             <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6 font-heading">
-              The Music Store LK
+              The Harmony House
               <span className="block text-gray-600 font-light italic">Difference</span>
             </h2>
             <p className="text-xl luxury-text max-w-3xl mx-auto">
@@ -415,13 +410,13 @@ export default function HomePage() {
             >
               {!isAuthenticated ? (
                 <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                  <Link to="/register">
+                  <Link to="/onboarding">
                     <Button className="bg-secondary-500 hover:bg-secondary-600 text-gray-900 px-10 py-4 rounded-full text-lg font-medium transition-all duration-300 transform hover:scale-105">
                       Create Free Account
                     </Button>
                   </Link>
                   <Link to="/products">
-                    <Button variant="outline" className="border-white text-white hover:bg-white hover:text-gray-900 px-10 py-4 rounded-full text-lg">
+                    <Button variant="outline" className="border-white text-black hover:bg-white hover:text-gray-900 px-10 py-4 rounded-full text-lg">
                       Browse Collection
                     </Button>
                   </Link>

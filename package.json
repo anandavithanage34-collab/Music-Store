@@ -1,5 +1,5 @@
 {
-  "name": "musicweb",
+  "name": "harmony-house",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "Modern e-commerce website for Sri Lankan musical instrument store",
+  "description": "Harmony House - Modern e-commerce website for Sri Lankan musical instrument store",
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-avatar": "^1.1.10",

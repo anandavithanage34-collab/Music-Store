@@ -1,17 +1,20 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X, Loader2, Award, Target } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
 import { Input, Label, Select } from '../../components/ui/Input'
 import { useAuth } from '../../hooks/useAuth'
 import { SriLankanCities } from '../../types'
+import { supabase } from '../../lib/supabase'
 
 export default function ProfilePage() {
-  const { user, profile, updateProfile } = useAuth()
+  const { user, profile, updateProfile, loading: authLoading } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [onboardingResponses, setOnboardingResponses] = useState([])
+  const [onboardingQuestions, setOnboardingQuestions] = useState([])
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
@@ -20,7 +23,7 @@ export default function ProfilePage() {
   })
   
   // Update form data when profile changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (profile) {
       const newFormData = {
         full_name: profile.full_name || '',
@@ -32,6 +35,55 @@ export default function ProfilePage() {
     }
   }, [profile])
 
+  // Fetch onboarding responses when user is available
+  useEffect(() => {
+    if (user?.id) {
+      fetchOnboardingData()
+    }
+  }, [user?.id])
+
+  const fetchOnboardingData = async () => {
+    try {
+      console.log('📥 Fetching onboarding data for user:', user.id)
+      
+      // Fetch user's onboarding responses with questions
+      const { data: responses, error: responsesError } = await supabase
+        .from('onboarding_responses')
+        .select(`
+          *,
+          onboarding_questions (
+            id,
+            question,
+            options
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at')
+
+      if (responsesError) {
+        console.error('❌ Error fetching onboarding responses:', responsesError)
+      } else {
+        console.log('✅ Onboarding responses fetched:', responses)
+        setOnboardingResponses(responses || [])
+      }
+
+      // Fetch all questions for reference
+      const { data: questions, error: questionsError } = await supabase
+        .from('onboarding_questions')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order')
+
+      if (questionsError) {
+        console.error('❌ Error fetching questions:', questionsError)
+      } else {
+        setOnboardingQuestions(questions || [])
+      }
+    } catch (error) {
+      console.error('❌ Error in fetchOnboardingData:', error)
+    }
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -39,270 +91,354 @@ export default function ProfilePage() {
   }
 
   const handleSave = async () => {
-    if (!formData.full_name.trim()) {
-      setError('Full name is required')
-      return
-    }
-
     try {
-      const { error } = await updateProfile({
+      setLoading(true)
+      setError('')
+
+      const profileData = {
         full_name: formData.full_name,
         phone: formData.phone,
         city: formData.city,
-        age: formData.age ? parseInt(formData.age) : null
-      })
+        age: parseInt(formData.age) || null
+      }
 
-      if (error) {
-        setError('Failed to update profile')
+      const { data, error: updateError } = await updateProfile(profileData)
+
+      if (updateError) {
+        setError(updateError.message || 'Failed to update profile')
       } else {
         setIsEditing(false)
-        setError('')
-        // Show success message
-        alert('✅ Profile updated successfully!')
       }
     } catch (error) {
+      console.error('❌ Profile update error:', error)
       setError('An unexpected error occurred')
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleCancel = () => {
-    setFormData({
-      full_name: profile?.full_name || '',
-      phone: profile?.phone || '',
-      city: profile?.city || '',
-      age: profile?.age || ''
-    })
+    // Reset form data to original values
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        phone: profile.phone || '',
+        city: profile.city || '',
+        age: profile.age?.toString() || ''
+      })
+    }
     setIsEditing(false)
     setError('')
   }
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <Card className="p-8">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading your profile...</p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <Card className="p-8">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-4">Please sign in to view your profile.</p>
+            <Button onClick={() => navigate('/login')}>
+              Go to Login
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
+          className="space-y-6"
         >
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 font-heading">My Profile</h1>
-            <p className="text-gray-600 mt-2">Manage your personal information and preferences</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Profile Overview */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <User className="h-12 w-12 text-primary-600" />
+          {/* Profile Header */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <User className="w-6 h-6 text-primary-600 mr-2" />
+                    My Profile
+                  </CardTitle>
+                  <p className="text-gray-600 mt-1">Manage your account information</p>
+                </div>
+                {!isEditing ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    disabled={loading}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <div className="space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={loading}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSave}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save Changes
+                    </Button>
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                    {profile?.full_name || 'User'}
-                  </h2>
-                  <p className="text-gray-600 mb-2">{user?.email}</p>
-                  {profile?.skill_level && (
-                    <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800">
-                      {profile.skill_level.charAt(0).toUpperCase() + profile.skill_level.slice(1)} Level
-                    </div>
-                  )}
-                  <div className="mt-4 pt-4 border-t space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center justify-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Today'}</span>
-                    </div>
-                    {profile?.onboarding_completed ? (
-                      <div className="text-green-600">
-                        ✅ Profile Complete
-                      </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+                  <p className="text-red-800 text-sm">{error}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Personal Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                  
+                  <div>
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={user.email}
+                      disabled
+                      className="bg-gray-50"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="full_name">Full Name</Label>
+                    <Input
+                      id="full_name"
+                      name="full_name"
+                      type="text"
+                      value={formData.full_name}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={!isEditing ? 'bg-gray-50' : ''}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="age">Age</Label>
+                    <Input
+                      id="age"
+                      name="age"
+                      type="number"
+                      min="13"
+                      max="120"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={!isEditing ? 'bg-gray-50' : ''}
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                  
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={!isEditing ? 'bg-gray-50' : ''}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="city">City</Label>
+                    {isEditing ? (
+                      <Select
+                        id="city"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Select your city</option>
+                        {SriLankanCities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </Select>
                     ) : (
-                      <div className="text-orange-600">
-                        ⏳ Complete your onboarding
-                      </div>
+                      <Input
+                        id="city"
+                        type="text"
+                        value={formData.city}
+                        disabled
+                        className="bg-gray-50"
+                      />
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Profile Details */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Personal Information</CardTitle>
-                  {!isEditing ? (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setIsEditing(true)}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleCancel}
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={handleSave}
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        Save
-                      </Button>
+          {/* Skill Level Card */}
+          {profile?.skill_level && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="w-6 h-6 text-primary-600 mr-2" />
+                  Musical Skill Level
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className={`inline-block px-4 py-2 rounded-full text-lg font-semibold ${
+                      profile.skill_level === 'professional' ? 'bg-purple-100 text-purple-800' :
+                      profile.skill_level === 'intermediate' ? 'bg-blue-100 text-blue-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {profile.skill_level === 'professional' ? '🎼 Professional' :
+                       profile.skill_level === 'intermediate' ? '🎵 Intermediate' :
+                       '🎶 Beginner'}
                     </div>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                      <p className="text-red-800 text-sm">{error}</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="email">Email Address</Label>
-                      <div className="flex items-center mt-1 p-3 bg-gray-50 rounded-md">
-                        <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-gray-700">{user?.email}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="full_name">Full Name</Label>
-                      {isEditing ? (
-                        <Input
-                          id="full_name"
-                          name="full_name"
-                          value={formData.full_name}
-                          onChange={handleInputChange}
-                          className="mt-1"
-                        />
-                      ) : (
-                        <div className="flex items-center mt-1 p-3 border rounded-md">
-                          <User className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-gray-700">{profile?.full_name || 'Not set'}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      {isEditing ? (
-                        <Input
-                          id="phone"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          placeholder="+94 77 123 4567"
-                          className="mt-1"
-                        />
-                      ) : (
-                        <div className="flex items-center mt-1 p-3 border rounded-md">
-                          <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-gray-700">{profile?.phone || 'Not set'}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      {isEditing ? (
-                        <Select
-                          id="city"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleInputChange}
-                          className="mt-1"
-                        >
-                          <option value="">Select City</option>
-                          {SriLankanCities.map(city => (
-                            <option key={city} value={city}>{city}</option>
-                          ))}
-                        </Select>
-                      ) : (
-                        <div className="flex items-center mt-1 p-3 border rounded-md">
-                          <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-gray-700">{profile?.city || 'Not set'}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="age">Age</Label>
-                      {isEditing ? (
-                        <Input
-                          id="age"
-                          name="age"
-                          type="number"
-                          min="13"
-                          max="120"
-                          value={formData.age}
-                          onChange={handleInputChange}
-                          className="mt-1"
-                        />
-                      ) : (
-                        <div className="flex items-center mt-1 p-3 border rounded-md">
-                          <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-gray-700">{profile?.age || 'Not set'}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label>Skill Level</Label>
-                      <div className="flex items-center mt-1 p-3 border rounded-md">
-                        <span className="text-gray-700">
-                          {profile?.skill_level 
-                            ? profile.skill_level.charAt(0).toUpperCase() + profile.skill_level.slice(1)
-                            : 'Not assessed'
-                          }
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Skill level is determined through onboarding assessment
-                      </p>
-                    </div>
+                    <p className="text-gray-600 mt-2">
+                      Based on your musical assessment
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.href = '/onboarding'}
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    Retake Assessment
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Additional Information */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Account Statistics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">0</div>
-                      <div className="text-sm text-gray-600">Orders</div>
+          {/* Onboarding Responses */}
+          {onboardingResponses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Target className="w-6 h-6 text-primary-600 mr-2" />
+                  Your Assessment Responses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {onboardingResponses.map((response, index) => (
+                    <div key={response.id} className="border-l-4 border-blue-200 pl-4">
+                      <h4 className="font-medium text-gray-900">
+                        {response.onboarding_questions?.question || `Question ${index + 1}`}
+                      </h4>
+                      <p className="text-gray-600 mt-1">{response.answer}</p>
+                      <div className="flex space-x-4 mt-2 text-xs text-gray-500">
+                        <span>Beginner: {response.points_beginner}</span>
+                        <span>Intermediate: {response.points_intermediate}</span>
+                        <span>Professional: {response.points_professional}</span>
+                      </div>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">0</div>
-                      <div className="text-sm text-gray-600">Reviews</div>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600">0</div>
-                      <div className="text-sm text-gray-600">Wishlist</div>
-                    </div>
-                    <div className="p-4 bg-orange-50 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-600">LKR 0</div>
-                      <div className="text-sm text-gray-600">Total Spent</div>
-                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Account Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">0</div>
+                  <div className="text-sm text-gray-600">Orders</div>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">0</div>
+                  <div className="text-sm text-gray-600">Reviews</div>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {onboardingResponses.length}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                  <div className="text-sm text-gray-600">Assessment Questions</div>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">
+                    {profile?.onboarding_completed ? '✓' : '○'}
+                  </div>
+                  <div className="text-sm text-gray-600">Onboarding</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Account Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.href = '/onboarding'}
+                  className="w-full"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Retake Musical Assessment
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    supabase.auth.signOut()
+                    window.location.href = '/'
+                  }}
+                  className="w-full"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
     </div>
