@@ -23,7 +23,7 @@ export const sampleProducts = [
     brands: { name: 'Yamaha' },
     categories: { name: 'String Instruments', slug: 'string_instruments' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Yamaha FG830 Acoustic Guitar.jpg',
       is_primary: true,
       alt_text: 'Yamaha FG830 Acoustic Guitar'
     }],
@@ -51,7 +51,7 @@ export const sampleProducts = [
     brands: { name: 'Roland' },
     categories: { name: 'Keys', slug: 'keys' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Roland FP-30X Digital Piano.jpg',
       is_primary: true,
       alt_text: 'Roland FP-30X Digital Piano'
     }],
@@ -77,7 +77,7 @@ export const sampleProducts = [
     brands: { name: 'Traditional Crafts LK' },
     categories: { name: 'Drums and Percussion', slug: 'drums_percussion' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Traditional Sri Lankan Tabla Set.jpg',
       is_primary: true,
       alt_text: 'Traditional Sri Lankan Tabla Set'
     }],
@@ -105,9 +105,9 @@ export const sampleProducts = [
     brands: { name: 'Fender' },
     categories: { name: 'Guitars and Basses', slug: 'guitars_basses' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Fender Player Stratocaster Electric Guitar.jpg',
       is_primary: true,
-      alt_text: 'Fender Player Stratocaster'
+      alt_text: 'Fender Player Stratocaster Electric Guitar'
     }],
     inventory: { quantity_available: 12 }
   },
@@ -132,7 +132,7 @@ export const sampleProducts = [
     brands: { name: 'Pearl' },
     categories: { name: 'Drums and Percussion', slug: 'drums_percussion' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Pearl Export Series Drum Kit.jpg',
       is_primary: true,
       alt_text: 'Pearl Export Series Drum Kit'
     }],
@@ -186,7 +186,7 @@ export const sampleProducts = [
     brands: { name: 'Casio' },
     categories: { name: 'Keys', slug: 'keys' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Casio CT-X700 Keyboard.jpg',
       is_primary: true,
       alt_text: 'Casio CT-X700 Keyboard'
     }],
@@ -214,7 +214,7 @@ export const sampleProducts = [
     brands: { name: 'Ibanez' },
     categories: { name: 'Guitars and Basses', slug: 'guitars_basses' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Ibanez GSR200 Bass Guitar.jpg',
       is_primary: true,
       alt_text: 'Ibanez GSR200 Bass Guitar'
     }],
