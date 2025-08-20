@@ -1,7 +1,8 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Phone, Mail, MapPin, Clock } from 'lucide-react'
+import { Phone, Mail, MapPin, Clock, Wrench, Music2, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
 
 export default function ContactPage() {
   return (
@@ -48,8 +49,8 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900">Address</h3>
                   <p className="text-gray-600">
-                    123 Galle Road<br />
-                    Colombo 04<br />
+                    17/2 Ekamuthu lane<br />
+                    Naykakannda, Wattala<br />
                     Sri Lanka
                   </p>
                 </div>
@@ -71,9 +72,20 @@ export default function ContactPage() {
               <CardTitle>Visit Our Store</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 mb-4">
-                <MapPin className="h-8 w-8" />
-                <span className="ml-2">Map will be displayed here</span>
+              <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden mb-4">
+                <img 
+                  src="/images/map.png" 
+                  alt="Harmony House Location Map - 17/2 Ekamuthu lane, Naykakannda, Wattala"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    e.target.nextSibling.style.display = 'flex'
+                  }}
+                />
+                <div className="w-full h-full flex items-center justify-center text-gray-500" style={{display: 'none'}}>
+                  <MapPin className="h-8 w-8" />
+                  <span className="ml-2">Map unavailable</span>
+                </div>
               </div>
               <p className="text-gray-600">
                 Come visit our showroom to try instruments before you buy. Our experienced staff 
@@ -83,6 +95,120 @@ export default function ContactPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Our Services Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mt-16"
+        >
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 font-heading">Our Services</h2>
+            <p className="text-xl text-gray-600">
+              Beyond selling instruments, we offer comprehensive musical services
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Instrument Repair Service */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card className="h-full border-2 border-gray-100 hover:border-gray-200 transition-colors">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <Wrench className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <CardTitle className="text-xl">Instrument Repair Services</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-gray-600">
+                    Our skilled technicians provide professional repair and maintenance services for all types of musical instruments.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">Services Include:</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Guitar & bass setup and repairs</li>
+                        <li>• Piano tuning and maintenance</li>
+                        <li>• Drum kit assembly and tuning</li>
+                        <li>• Electronic instrument troubleshooting</li>
+                        <li>• String replacement and setup</li>
+                        <li>• Amplifier and audio equipment repair</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h4 className="font-semibold text-blue-900 mb-2">Contact for Repairs:</h4>
+                      <div className="space-y-1 text-sm text-blue-800">
+                        <p><strong>Phone:</strong> +94 77 234 5678 (Repair Department)</p>
+                        <p><strong>Email:</strong> repairs@harmonyhouse.lk</p>
+                        <p><strong>Hours:</strong> Monday - Saturday: 8:00 AM - 6:00 PM</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+              
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Music Lessons Service */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              <Card className="h-full border-2 border-gray-100 hover:border-gray-200 transition-colors">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <Music2 className="h-6 w-6 text-green-600" />
+                    </div>
+                    <CardTitle className="text-xl">Music Lessons</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-gray-600">
+                    Learn to play your favorite instrument with our experienced instructors. We offer both individual and group lessons.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-gray-900 mb-2">Instruments We Teach:</h4>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• Guitar (Acoustic & Electric)</li>
+                        <li>• Piano & Keyboard</li>
+                        <li>• Drums & Percussion</li>
+                        <li>• Bass Guitar</li>
+                        <li>• Traditional Sri Lankan instruments</li>
+                        <li>• Music theory and composition</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <h4 className="font-semibold text-green-900 mb-2">Lesson Booking:</h4>
+                      <div className="space-y-1 text-sm text-green-800">
+                        <p><strong>Phone:</strong> +94 77 345 6789 (Music Academy)</p>
+                        <p><strong>Email:</strong> lessons@harmonyhouse.lk</p>
+                        <p><strong>Rates:</strong> Starting from LKR 2,500 per lesson</p>
+                        <p><strong>Duration:</strong> 45-60 minutes per session</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </div>
   )

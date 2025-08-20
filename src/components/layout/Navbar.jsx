@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Music, ShoppingCart, User, Search, Menu, X, ChevronDown } from 'lucide-react'
+import { Music, ShoppingCart, User, Search, Menu, X, ChevronDown, Heart } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../hooks/useAuth'
 import { useCart } from '../../hooks/useCart'
+import { useWishlist } from '../../hooks/useWishlist'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -13,6 +14,7 @@ export default function Navbar() {
   const [isSigningOut, setIsSigningOut] = useState(false)
   const { isAuthenticated, user, signOut } = useAuth()
   const { getCartCount } = useCart()
+  const { getWishlistCount } = useWishlist()
   const navigate = useNavigate()
 
   const handleSearch = (e) => {
@@ -54,6 +56,7 @@ export default function Navbar() {
   }
 
   const cartItemCount = getCartCount()
+  const wishlistItemCount = getWishlistCount()
 
   const navigationItems = [
     { name: 'Collections', href: '/products', hasDropdown: true },
@@ -152,6 +155,26 @@ export default function Navbar() {
 
           {/* Right side items */}
           <div className="flex items-center space-x-6">
+            {/* Wishlist */}
+            <Link to="/wishlist" className="relative group">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="relative p-3 text-gray-700 hover:text-white transition-all duration-300 rounded-full bg-gray-100/50 hover:bg-red-500 backdrop-blur-sm border border-gray-200/50 hover:border-red-500"
+              >
+                <Heart className="h-6 w-6" />
+                {wishlistItemCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                  >
+                    {wishlistItemCount}
+                  </motion.span>
+                )}
+              </motion.div>
+            </Link>
+
             {/* Cart */}
             <Link to="/cart" className="relative group">
               <motion.div
@@ -236,15 +259,7 @@ export default function Navbar() {
                             🛠️ Admin Dashboard
                           </Link>
                         )}
-                        {(user?.role === 'staff' || user?.role === 'admin') && (
-                          <Link 
-                            to="/staff" 
-                            onClick={() => setIsUserMenuOpen(false)}
-                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-                          >
-                            Staff Dashboard
-                          </Link>
-                        )}
+
                       </div>
                       
                       <div className="border-t border-gray-100 py-2">

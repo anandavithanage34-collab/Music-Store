@@ -20,6 +20,7 @@ export const sampleProducts = [
     },
     warranty_months: 24,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=IehfYU9XETU',
     brands: { name: 'Yamaha' },
     categories: { name: 'String Instruments', slug: 'string_instruments' },
     product_images: [{
@@ -48,6 +49,7 @@ export const sampleProducts = [
     },
     warranty_months: 12,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=FO--7dftNUE',
     brands: { name: 'Roland' },
     categories: { name: 'Keys', slug: 'keys' },
     product_images: [{
@@ -74,6 +76,7 @@ export const sampleProducts = [
     },
     warranty_months: 6,
     is_active: true,
+    video_url: 'https://www.youtube.com/shorts/qUgcoelTBGI',
     brands: { name: 'Traditional Crafts LK' },
     categories: { name: 'Drums and Percussion', slug: 'drums_percussion' },
     product_images: [{
@@ -102,6 +105,7 @@ export const sampleProducts = [
     },
     warranty_months: 12,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=s3rNsndzotw',
     brands: { name: 'Fender' },
     categories: { name: 'Guitars and Basses', slug: 'guitars_basses' },
     product_images: [{
@@ -129,6 +133,7 @@ export const sampleProducts = [
     },
     warranty_months: 12,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=bApo4aWHzIE',
     brands: { name: 'Pearl' },
     categories: { name: 'Drums and Percussion', slug: 'drums_percussion' },
     product_images: [{
@@ -156,10 +161,11 @@ export const sampleProducts = [
     },
     warranty_months: 24,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=Jp76qV9R1Fg',
     brands: { name: 'Audio-Technica' },
     categories: { name: 'Studio and Recording Equipment', slug: 'studio_recording' },
     product_images: [{
-      image_url: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=600&q=80',
+      image_url: '/images/Audio-Technica AT2020 Studio Microphone.jpg',
       is_primary: true,
       alt_text: 'Audio-Technica AT2020 Studio Microphone'
     }],
@@ -183,6 +189,7 @@ export const sampleProducts = [
     },
     warranty_months: 12,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=qs9TRLEOpss',
     brands: { name: 'Casio' },
     categories: { name: 'Keys', slug: 'keys' },
     product_images: [{
@@ -211,6 +218,7 @@ export const sampleProducts = [
     },
     warranty_months: 12,
     is_active: true,
+    video_url: 'https://www.youtube.com/watch?v=8PJAR7rbANU',
     brands: { name: 'Ibanez' },
     categories: { name: 'Guitars and Basses', slug: 'guitars_basses' },
     product_images: [{

@@ -422,7 +422,7 @@ export default function ProductManagement() {
                   name="image_url"
                   value={productForm.image_url}
                   onChange={handleInputChange}
-                  placeholder="/images/product-name.jpg"
+                  placeholder="/images/Yamaha FG830 Acoustic Guitar.jpg"
                 />
                 {productForm.image_url && (
                   <div className="mt-2">

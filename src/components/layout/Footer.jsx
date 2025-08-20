@@ -113,7 +113,9 @@ export default function Footer() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3 text-gray-300">
                   <MapPin className="h-5 w-5 text-secondary-400" />
-                  <span>123 Music Street, Colombo 03, Sri Lanka</span>
+                  <span> 17/2 Ekamuthu lane<br />
+                    Naykakannda, Wattala<br />
+                    Sri Lanka</span>
                 </div>
                 <div className="flex items-center space-x-3 text-gray-300">
                   <Phone className="h-5 w-5 text-secondary-400" />

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Star, ShoppingCart, Heart, Share2, Truck, Shield, ArrowLeft, Plus, Minus } from 'lucide-react'
+import { Star, ShoppingCart, Heart, Share2, Truck, Shield, ArrowLeft, Plus, Minus, Play } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card'
 import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
+import { useWishlist } from '../../hooks/useWishlist'
 import { formatPrice, getSkillLevelColor } from '../../lib/utils'
 import { sampleProducts } from '../../lib/sampleData'
 
@@ -17,9 +18,11 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [loading, setLoading] = useState(true)
   const [addingToCart, setAddingToCart] = useState(false)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
 
   const { addToCart } = useCart()
   const { profile } = useAuth()
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
 
   useEffect(() => {
     fetchProduct()
@@ -270,9 +273,34 @@ export default function ProductDetailPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1">
-                  <Heart className="mr-2 h-4 w-4" />
-                  Add to Wishlist
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={async () => {
+                    if (wishlistLoading) return
+                    setWishlistLoading(true)
+                    
+                    try {
+                      const inWishlist = isInWishlist(product.id)
+                      const result = inWishlist 
+                        ? await removeFromWishlist(product.id)
+                        : await addToWishlist(product.id)
+                      
+                      if (!result.success) {
+                        alert(result.error || 'Failed to update wishlist')
+                      }
+                    } catch (error) {
+                      console.error('Wishlist error:', error)
+                    } finally {
+                      setWishlistLoading(false)
+                    }
+                  }}
+                  disabled={wishlistLoading}
+                >
+                  <Heart className={`mr-2 h-4 w-4 ${
+                    isInWishlist(product.id) ? 'text-red-500 fill-current' : ''
+                  }`} />
+                  {isInWishlist(product.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                 </Button>
                 <Button variant="outline" className="flex-1">
                   <Share2 className="mr-2 h-4 w-4" />
@@ -307,9 +335,23 @@ export default function ProductDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none">
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-gray-700 leading-relaxed mb-6">
                     {product.description || 'No description available.'}
                   </p>
+                  
+                  {/* View Video Button */}
+                  {product.video_url && (
+                    <div className="mt-6">
+                      <Button
+                        onClick={() => window.open(product.video_url, '_blank')}
+                        variant="outline"
+                        className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300 hover:text-red-800"
+                      >
+                        <Play className="mr-2 h-4 w-4" />
+                        View Video
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

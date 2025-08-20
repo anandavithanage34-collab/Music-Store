@@ -5,14 +5,17 @@ import { Star, ShoppingCart, Heart, Eye, Music } from 'lucide-react'
 import { Button } from './Button'
 import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
+import { useWishlist } from '../../hooks/useWishlist'
 import { formatPrice, getSkillLevelColor } from '../../lib/utils'
 
 export default function ProductCard({ product, className }) {
   const { addToCart } = useCart()
   const { profile } = useAuth()
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
   const [addingToCart, setAddingToCart] = useState(false)
   const [addToCartSuccess, setAddToCartSuccess] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
 
   const primaryImage = product.product_images?.find(img => img.is_primary) || product.product_images?.[0]
   const rating = product.average_rating || 4.5
@@ -95,13 +98,35 @@ export default function ProductCard({ product, className }) {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             className="absolute top-4 right-4 p-2.5 bg-white/95 backdrop-blur-sm hover:bg-white rounded-full shadow-lg transition-all duration-200 z-10"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault()
               e.stopPropagation()
-              // Add to wishlist functionality
+              
+              if (wishlistLoading) return
+              setWishlistLoading(true)
+              
+              try {
+                const inWishlist = isInWishlist(product.id)
+                const result = inWishlist 
+                  ? await removeFromWishlist(product.id)
+                  : await addToWishlist(product.id)
+                
+                if (!result.success) {
+                  alert(result.error || 'Failed to update wishlist')
+                }
+              } catch (error) {
+                console.error('Wishlist error:', error)
+              } finally {
+                setWishlistLoading(false)
+              }
             }}
+            disabled={wishlistLoading}
           >
-            <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
+            <Heart className={`h-4 w-4 transition-colors ${
+              isInWishlist(product.id) 
+                ? 'text-red-500 fill-current' 
+                : 'text-gray-600 hover:text-red-500'
+            }`} />
           </motion.button>
 
           {/* Status Badges */}
