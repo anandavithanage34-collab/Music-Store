@@ -16,6 +16,23 @@ export default function OrderSuccessPage() {
 
   useEffect(() => {
     fetchOrder()
+    
+    // Set up real-time subscription for order updates
+    const orderSubscription = supabase
+      .channel(`order_${orderId}_changes`)
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, 
+        (payload) => {
+          console.log('🔄 Order updated in real-time:', payload.new)
+          // Update the order with new data
+          setOrder(prevOrder => ({ ...prevOrder, ...payload.new }))
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(orderSubscription)
+    }
   }, [orderId])
 
   const fetchOrder = async () => {
@@ -89,28 +106,37 @@ export default function OrderSuccessPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Success Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-8"
+          className="text-center mb-12"
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
-          >
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </motion.div>
-          
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 font-heading">
-            Order Placed Successfully!
-          </h1>
-          <p className="text-xl text-gray-600">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
+            <CheckCircle className="w-10 h-10 text-green-600" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Order Placed Successfully!</h1>
+          <p className="text-xl text-gray-600 mb-2">
             Thank you for your purchase. Your order has been confirmed.
           </p>
+          <p className="text-lg text-gray-500">
+            Order #{order?.order_number} • {formatDate(order?.created_at)}
+          </p>
+          
+          {/* Real-time Status Display */}
+          <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full">
+            <Package className="w-5 h-5 text-blue-600" />
+            <span className="font-medium text-blue-800">
+              Status: {order?.status?.charAt(0).toUpperCase() + order?.status?.slice(1) || 'Pending'}
+            </span>
+            {order?.admin_notes && (
+              <span className="text-sm text-blue-600 ml-2">
+                • {order.admin_notes}
+              </span>
+            )}
+          </div>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -156,63 +182,32 @@ export default function OrderSuccessPage() {
             </Card>
 
             {/* Shipping Address */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Shipping Address
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {order?.shipping_address ? (
-                  <div className="text-sm space-y-1">
-                    <p className="font-semibold">
-                      {typeof order.shipping_address === 'string' 
-                        ? JSON.parse(order.shipping_address).full_name 
-                        : order.shipping_address.full_name
-                      }
-                    </p>
-                    <p>
-                      {typeof order.shipping_address === 'string' 
-                        ? JSON.parse(order.shipping_address).phone 
-                        : order.shipping_address.phone
-                      }
-                    </p>
-                    <p>
-                      {typeof order.shipping_address === 'string' 
-                        ? JSON.parse(order.shipping_address).address_line_1 
-                        : order.shipping_address.address_line_1
-                      }
-                    </p>
-                    {((typeof order.shipping_address === 'string' 
-                        ? JSON.parse(order.shipping_address).address_line_2 
-                        : order.shipping_address.address_line_2
-                      )) && (
-                      <p>
-                        {typeof order.shipping_address === 'string' 
-                          ? JSON.parse(order.shipping_address).address_line_2 
-                          : order.shipping_address.address_line_2
-                        }
+            {order?.shipping_address && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Shipping Address</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-gray-900">{order.shipping_address.full_name}</p>
+                      <p className="text-gray-600">{order.shipping_address.address_line_1}</p>
+                      {order.shipping_address.address_line_2 && (
+                        <p className="text-gray-600">{order.shipping_address.address_line_2}</p>
+                      )}
+                      <p className="text-gray-600">
+                        {order.shipping_address.city}, {order.shipping_address.postal_code}
                       </p>
-                    )}
-                    <p>
-                      {typeof order.shipping_address === 'string' 
-                        ? JSON.parse(order.shipping_address).city 
-                        : order.shipping_address.city
-                      } {typeof order.shipping_address === 'string' 
-                        ? JSON.parse(order.shipping_address).postal_code 
-                        : order.shipping_address.postal_code
-                      }
-                    </p>
+                      <p className="text-gray-600">{order.shipping_address.phone}</p>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-gray-500">Address information not available</p>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </motion.div>
 
-          {/* Order Items */}
+          {/* Order Items & Timeline */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -258,42 +253,41 @@ export default function OrderSuccessPage() {
               </CardContent>
             </Card>
 
-            {/* Next Steps */}
+            {/* Order Timeline */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  What's Next?
-                </CardTitle>
+                <CardTitle>Order Timeline</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-semibold text-primary-700">1</span>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <CheckCircle className="w-3 h-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Order Placed</p>
+                      <p className="text-gray-600">{formatDate(order?.created_at)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Order Confirmation</p>
-                    <p className="text-gray-600">You'll receive a confirmation call within 2 hours</p>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Clock className="w-3 h-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Order Confirmed</p>
+                      <p className="text-gray-600">Processing your order</p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-semibold text-gray-700">2</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Processing</p>
-                    <p className="text-gray-600">We'll prepare your instruments with care</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-semibold text-gray-700">3</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">Delivery</p>
-                    <p className="text-gray-600">Delivery within 2-5 business days</p>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-gray-700">3</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Delivery</p>
+                      <p className="text-gray-600">Delivery within 2-5 business days</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>

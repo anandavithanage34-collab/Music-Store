@@ -17,6 +17,45 @@ export default function OrdersPage() {
   useEffect(() => {
     if (user) {
       fetchOrders()
+      
+      // Set up real-time subscription for order updates
+      const ordersSubscription = supabase
+        .channel('customer_orders_changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'orders' }, 
+          (payload) => {
+            console.log('🔄 Order updated in real-time:', payload.new)
+            // Check if this order belongs to the current user
+            if (payload.new.user_id === user.id) {
+              console.log('✅ Order belongs to current user, updating...')
+              // Update the specific order in the local state
+              setOrders(prevOrders => 
+                prevOrders.map(order => 
+                  order.id === payload.new.id 
+                    ? { ...order, ...payload.new }
+                    : order
+                )
+              )
+            }
+          }
+        )
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'orders' },
+          (payload) => {
+            console.log('🆕 New order received in real-time:', payload.new)
+            // Check if this new order belongs to the current user
+            if (payload.new.user_id === user.id) {
+              console.log('✅ New order belongs to current user, adding...')
+              // Add the new order to the local state
+              setOrders(prevOrders => [payload.new, ...prevOrders])
+            }
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(ordersSubscription)
+      }
     }
   }, [user])
 
@@ -84,7 +123,36 @@ export default function OrdersPage() {
     try {
       console.log('🔍 Fetching orders for user:', user.id)
       
-      // Always check localStorage for orders first (since we're using hardcoded data)
+      // Try database first for real orders
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              *,
+              products (
+                id,
+                name,
+                price,
+                product_images (image_url, is_primary)
+              )
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (!error && data && data.length > 0) {
+          console.log('📊 Database orders found:', data)
+          setOrders(data)
+          setLoading(false)
+          return
+        }
+      } catch (dbError) {
+        console.log('⚠️ Database fetch failed, falling back to localStorage:', dbError)
+      }
+      
+      // Fallback to localStorage for mock orders
       let mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
       console.log('📦 Found mock orders:', mockOrders)
       
@@ -126,39 +194,21 @@ export default function OrdersPage() {
         return
       }
 
-      console.log('🔄 No localStorage orders, trying database...')
+      console.log('🔄 No orders found, setting empty array')
+      setOrders([])
       
-      // Try database as fallback
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            *,
-            products (
-              id,
-              name,
-              price,
-              product_images (image_url, is_primary)
-            )
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching orders from database:', error)
-        setOrders([])
-      } else {
-        console.log('📊 Database orders:', data)
-        setOrders(data || [])
-      }
     } catch (error) {
       console.error('Error fetching orders:', error)
       setOrders([])
     } finally {
       setLoading(false)
     }
+  }
+
+  // Function to manually refresh orders
+  const handleRefreshOrders = async () => {
+    setLoading(true)
+    await fetchOrders()
   }
 
   const getStatusIcon = (status) => {
@@ -216,8 +266,21 @@ export default function OrdersPage() {
           transition={{ duration: 0.6 }}
         >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 font-heading">My Orders</h1>
-            <p className="text-gray-600 mt-2">Track your purchase history and order status</p>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 font-heading">My Orders</h1>
+                <p className="text-gray-600 mt-2">Track your purchase history and order status</p>
+              </div>
+              <Button 
+                onClick={handleRefreshOrders} 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Package className="h-4 w-4" />
+                Refresh Orders
+              </Button>
+            </div>
           </div>
 
           {orders.length === 0 ? (
@@ -281,48 +344,99 @@ export default function OrdersPage() {
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Shipping Address</p>
-                          <p className="font-medium flex items-center gap-1">
-                            <MapPin className="h-4 w-4 text-gray-400" />
-                            {typeof order.shipping_address === 'string' 
-                              ? order.shipping_address 
-                              : `${order.shipping_address?.city || 'Unknown City'}, Sri Lanka`}
-                          </p>
+                          <p className="font-semibold">{order.shipping_address?.city || 'N/A'}</p>
                         </div>
                       </div>
 
-                      {/* Order Items Details */}
+                      {/* Order Details (Expandable) */}
                       {selectedOrder === order.id && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.3 }}
-                          className="border-t pt-4"
+                          className="border-t pt-4 space-y-4"
                         >
-                          <h4 className="font-semibold mb-3">Order Items</h4>
-                          <div className="space-y-3">
-                            {order.order_items?.map((item) => (
-                              <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                                <div className="w-16 h-16 bg-white rounded-lg overflow-hidden flex-shrink-0">
-                                  {item.products?.product_images?.[0] ? (
-                                    <img
-                                      src={item.products.product_images[0].image_url}
-                                      alt={item.products.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                      <Package className="h-6 w-6" />
-                                    </div>
-                                  )}
+                          {/* Order Items */}
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-3">Order Items</h4>
+                            <div className="space-y-3">
+                              {order.order_items?.map((item, itemIndex) => (
+                                <div key={itemIndex} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                  <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                                    {item.products?.product_images?.[0] ? (
+                                      <img
+                                        src={item.products.product_images[0].image_url}
+                                        alt={item.products.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center">
+                                        <Package className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-900">
+                                      {item.products?.name || `Product ${item.product_id}`}
+                                    </p>
+                                    <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                                  </div>
+                                  <p className="font-semibold text-gray-900">
+                                    {formatPrice(item.total_price || item.unit_price * item.quantity)}
+                                  </p>
                                 </div>
-                                <div className="flex-1">
-                                  <h5 className="font-medium text-gray-900">{item.products?.name}</h5>
-                                  <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                                  <p className="text-sm font-medium text-gray-900">{formatPrice(item.price)}</p>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Shipping Address */}
+                          {order.shipping_address && (
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-3">Shipping Address</h4>
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                  <div className="text-sm">
+                                    <p className="font-medium">{order.shipping_address.full_name}</p>
+                                    <p className="text-gray-600">{order.shipping_address.address_line_1}</p>
+                                    {order.shipping_address.address_line_2 && (
+                                      <p className="text-gray-600">{order.shipping_address.address_line_2}</p>
+                                    )}
+                                    <p className="text-gray-600">
+                                      {order.shipping_address.city}, {order.shipping_address.postal_code}
+                                    </p>
+                                    <p className="text-gray-600">{order.shipping_address.phone}</p>
+                                  </div>
                                 </div>
                               </div>
-                            ))}
+                            </div>
+                          )}
+
+                          {/* Order Status Timeline */}
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-3">Order Status</h4>
+                            <div className="bg-gray-50 p-3 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                {getStatusIcon(order.status)}
+                                <span className="font-medium">
+                                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  • Last updated: {formatDate(order.updated_at || order.created_at)}
+                                </span>
+                              </div>
+                              {order.admin_notes && (
+                                <p className="text-sm text-gray-600 mt-2 italic">
+                                  Admin Note: {order.admin_notes}
+                                </p>
+                              )}
+                              {order.tracking_number && (
+                                <p className="text-sm text-gray-600 mt-2">
+                                  Tracking: <span className="font-mono">{order.tracking_number}</span>
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </motion.div>
                       )}
