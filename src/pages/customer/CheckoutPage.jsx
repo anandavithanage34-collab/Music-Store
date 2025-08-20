@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { formatPrice } from '../../lib/utils'
 import { SriLankanCities } from '../../types'
 import { supabase } from '../../lib/supabase'
+import OrderService from '../../lib/orderService'
 
 export default function CheckoutPage() {
   const { cartItems, getCartTotal, clearCart } = useCart()
@@ -25,20 +26,20 @@ export default function CheckoutPage() {
 
   const [orderData, setOrderData] = useState({
     shipping_address: {
-      full_name: profile?.full_name || '',
-      phone: profile?.phone || '',
+      full_name: user?.full_name || '',
+      phone: user?.phone || '',
       address_line_1: '',
       address_line_2: '',
-      city: profile?.city || '',
+      city: user?.city || '',
       postal_code: ''
     },
     billing_address: {
       same_as_shipping: true,
-      full_name: profile?.full_name || '',
-      phone: profile?.phone || '',
+      full_name: user?.full_name || '',
+      phone: user?.phone || '',
       address_line_1: '',
       address_line_2: '',
-      city: profile?.city || '',
+      city: user?.city || '',
       postal_code: ''
     },
     payment_method: 'cash_on_delivery',
@@ -96,93 +97,68 @@ export default function CheckoutPage() {
     }
 
     setLoading(true)
+    setErrors({}) // Clear previous errors
+    
     try {
-      // Generate order number
-      const orderNumber = `MUS-${Date.now().toString().slice(-6)}`
+      console.log('🚀 Starting order placement process...')
       
-      // Try database first, fall back to localStorage-based order for mock mode
-      let orderId = null
-      
-      try {
-        // Create order in database
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .insert([
-            {
-              user_id: profile?.id,
-              order_number: orderNumber,
-              total_amount: finalTotal,
-              shipping_address: JSON.stringify(orderData.shipping_address),
-              billing_address: JSON.stringify(orderData.billing_address),
-              customer_notes: orderData.customer_notes,
-              payment_method: orderData.payment_method,
-              status: 'pending'
-            }
-          ])
-          .select()
-          .single()
-
-        if (orderError) throw orderError
-
-        orderId = order.id
-
-        // Create order items
-        const orderItems = cartItems.map(item => ({
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.products?.price || item.price || 0,
-          total_price: (item.products?.price || item.price || 0) * item.quantity
-        }))
-
-        const { error: itemsError } = await supabase
-          .from('order_items')
-          .insert(orderItems)
-
-        if (itemsError) throw itemsError
-
-      } catch (dbError) {
-        console.log('⚠️ Database order failed, using mock order:', dbError)
-        
-        // Fallback to mock order for testing
-        orderId = `mock-${Date.now()}`
-        const mockOrder = {
-          id: orderId,
-          order_number: orderNumber,
-          user_id: profile?.id || 'mock-user',
-          total_amount: finalTotal,
-          shipping_address: orderData.shipping_address,
-          billing_address: orderData.billing_address,
-          customer_notes: orderData.customer_notes,
-          payment_method: orderData.payment_method,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          order_items: cartItems.map(item => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.products?.price || item.price || 0,
-            total_price: (item.products?.price || item.price || 0) * item.quantity
-          }))
-        }
-
-        // Store mock order in localStorage
-        const existingOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
-        existingOrders.push(mockOrder)
-        localStorage.setItem('mock_orders', JSON.stringify(existingOrders))
+      // Prepare order data for the service
+      const orderDataForService = {
+        user_id: user?.id,
+        user_email: user?.email,
+        total_amount: finalTotal,
+        subtotal: cartTotal,
+        delivery_fee: deliveryFee,
+        shipping_address: orderData.shipping_address,
+        billing_address: orderData.billing_address,
+        customer_notes: orderData.customer_notes,
+        payment_method: orderData.payment_method
       }
 
-      // Clear cart
+      // Try to create order using the enhanced service
+      let orderResult = null
+      
+      try {
+        console.log('📊 Attempting to create order in Supabase...')
+        orderResult = await OrderService.createOrder(orderDataForService, cartItems)
+        
+        if (!orderResult.success) {
+          throw new Error(orderResult.error || 'Order creation failed')
+        }
+        
+        console.log('✅ Order created successfully in Supabase:', orderResult.orderId)
+        
+      } catch (dbError) {
+        console.log('⚠️ Supabase order creation failed, falling back to mock order:', dbError)
+        
+        // Fallback to mock order for development/testing
+        orderResult = OrderService.createMockOrder(orderDataForService, cartItems)
+        
+        if (!orderResult.success) {
+          throw new Error('Failed to create both database and mock orders')
+        }
+        
+        console.log('📝 Mock order created as fallback:', orderResult.orderId)
+      }
+
+      // Clear cart after successful order creation
       await clearCart()
 
-      // Show success message briefly before navigation
-      alert('🎉 Order placed successfully! Redirecting to confirmation page...')
+      // Show success message
+      const successMessage = orderResult.isMock 
+        ? '🎉 Order placed successfully! (Development Mode - Mock Order)'
+        : '🎉 Order placed successfully! Redirecting to confirmation page...'
+      
+      alert(successMessage)
 
       // Navigate to success page
-      navigate(`/order-success/${orderId}`)
+      navigate(`/order-success/${orderResult.orderId}`)
 
     } catch (error) {
       console.error('❌ Error placing order:', error)
-      setErrors({ submit: 'Failed to place order. Please try again.' })
+      setErrors({ 
+        submit: `Failed to place order: ${error.message}. Please try again.` 
+      })
     } finally {
       setLoading(false)
     }
@@ -190,13 +166,13 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <div className="text-center mb-16">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="text-center mb-16">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

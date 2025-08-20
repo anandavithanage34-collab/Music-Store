@@ -47,13 +47,13 @@ export default function OrderManagement() {
   useEffect(() => {
     fetchOrders()
     
-    // Set up real-time subscription for orders
+    // Set up real-time subscription for order_details table
     const ordersSubscription = supabase
-      .channel('orders_changes')
+      .channel('order_details_changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'orders' }, 
+        { event: '*', schema: 'public', table: 'order_details' }, 
         () => {
-          console.log('🔄 Orders changed, refreshing...')
+          console.log('🔄 Order details changed, refreshing...')
           fetchOrders()
         }
       )
@@ -68,77 +68,52 @@ export default function OrderManagement() {
     try {
       setLoading(true)
       setError('')
-      console.log('📦 Fetching all orders...')
+      console.log('📦 Fetching all orders from order_details table...')
       
-      // Try to fetch from database first
-      let dbOrders = []
-      try {
-        const { data, error } = await supabase.rpc('get_all_orders')
-        
-        if (error) {
-          console.error('❌ Database function error:', error)
-          // Fall back to direct query
-          const { data: directData, error: directError } = await supabase
-            .from('orders')
-            .select(`
-              *,
-              profiles!orders_user_id_fkey (
-                id,
-                full_name,
-                email,
-                phone,
-                city
-              ),
-              order_items (
-                *,
-                products (
-                  id,
-                  name,
-                  sku
-                )
-              )
-            `)
-            .order('created_at', { ascending: false })
-          
-          if (directError) throw directError
-          dbOrders = directData || []
-        } else {
-          dbOrders = data || []
-        }
-      } catch (dbError) {
-        console.error('❌ Database error:', dbError)
-        dbOrders = []
+      // Fetch from the simplified order_details table
+      const { data, error } = await supabase
+        .from('order_details')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('❌ Error fetching orders:', error)
+        throw error
       }
       
-      // Also check localStorage for mock orders (development)
-      let mockOrders = []
-      try {
-        const storedOrders = localStorage.getItem('mock_orders')
-        if (storedOrders) {
-          mockOrders = JSON.parse(storedOrders).map(order => ({
-            ...order,
-            customer: {
-              full_name: order.shipping_address?.full_name || 'Unknown Customer',
-              email: 'mock@example.com',
-              phone: order.shipping_address?.phone || 'N/A',
-              city: order.shipping_address?.city || 'N/A'
-            },
-            items: order.order_items || []
-          }))
-        }
-      } catch (mockError) {
-        console.error('❌ Mock orders error:', mockError)
-        mockOrders = []
-      }
+      // Transform the data to match the expected format
+      const transformedOrders = (data || []).map(order => ({
+        id: order.id,
+        order_number: order.order_number,
+        user_id: order.user_id,
+        customer: {
+          full_name: order.customer_full_name,
+          email: order.customer_email,
+          phone: order.customer_phone,
+          city: order.delivery_city
+        },
+        shipping_address: order.shipping_address,
+        billing_address: order.billing_address,
+        total_amount: order.total_amount,
+        subtotal: order.subtotal,
+        delivery_fee: order.delivery_fee,
+        status: order.order_status,
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
+        customer_notes: order.customer_notes,
+        admin_notes: order.admin_notes,
+        tracking_number: order.tracking_number,
+        estimated_delivery_date: order.estimated_delivery_date,
+        actual_delivery_date: order.actual_delivery_date,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        // Extract items from the JSON order_items field
+        items: order.order_items || [],
+        total_items: order.total_items || 0
+      }))
       
-      // Combine and deduplicate orders
-      const allOrders = [...dbOrders, ...mockOrders]
-      const uniqueOrders = allOrders.filter((order, index, self) => 
-        index === self.findIndex(o => o.id === order.id || o.order_number === order.order_number)
-      )
-      
-      console.log('✅ Orders fetched:', uniqueOrders)
-      setOrders(uniqueOrders)
+      console.log('✅ Orders fetched from order_details table:', transformedOrders)
+      setOrders(transformedOrders)
       setLastRefresh(new Date())
       
     } catch (error) {
@@ -156,90 +131,41 @@ export default function OrderManagement() {
       setLoading(true)
       setError('')
       
-      // Check if this is a mock order (starts with 'mock-')
-      if (selectedOrder.id && selectedOrder.id.toString().startsWith('mock-')) {
-        // Handle mock order status update locally
-        console.log('📝 Updating mock order status:', selectedOrder.id)
-        
-        // Update mock order in localStorage
-        const mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
-        const updatedMockOrders = mockOrders.map(order => 
-          order.id === selectedOrder.id 
-            ? { 
-                ...order, 
-                status: statusForm.status,
-                admin_notes: statusForm.admin_notes || null,
-                tracking_number: statusForm.tracking_number || null,
-                updated_at: new Date().toISOString()
-              }
-            : order
-        )
-        localStorage.setItem('mock_orders', JSON.stringify(updatedMockOrders))
-        
-        setSuccess(`Mock order status updated to ${statusForm.status}`)
-        setShowStatusDialog(false)
-        
-        // Refresh orders to show updated status
-        await fetchOrders()
-        
-        // Trigger dashboard stats update for mock orders
-        window.dispatchEvent(new CustomEvent('orderStatusUpdated', {
-          detail: { orderId: selectedOrder.id, newStatus: statusForm.status }
-        }))
-        
+      if (!selectedOrder) {
+        setError('No order selected')
         return
       }
-      
-      // For real database orders, try database update first
-      let updateSuccess = false
-      try {
-        const { data, error } = await supabase.rpc('update_order_status', {
-          p_order_id: selectedOrder.id,
-          p_status: statusForm.status,
-          p_admin_notes: statusForm.admin_notes || null,
-          p_tracking_number: statusForm.tracking_number || null
-        })
 
-        if (error) throw error
-        if (data && data[0]?.success) {
-          updateSuccess = true
-        } else {
-          throw new Error(data?.[0]?.error || 'Update failed')
-        }
-      } catch (dbError) {
-        console.log('⚠️ Database update failed, trying direct update:', dbError)
-        
-        // Fallback to direct update
-        const { error: directError } = await supabase
-          .from('orders')
-          .update({
-            status: statusForm.status,
-            admin_notes: statusForm.admin_notes || null,
-            tracking_number: statusForm.tracking_number || null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedOrder.id)
-        
-        if (directError) throw directError
-        updateSuccess = true
-      }
+      console.log('🔄 Updating order status:', selectedOrder.id, statusForm)
       
-      if (updateSuccess) {
-        setSuccess(`Order status updated to ${statusForm.status}`)
-        setShowStatusDialog(false)
-        
-        // Refresh orders and trigger dashboard stats update
-        await fetchOrders()
-        
-        // Trigger a custom event to notify parent components
-        window.dispatchEvent(new CustomEvent('orderStatusUpdated', {
-          detail: { orderId: selectedOrder.id, newStatus: statusForm.status }
-        }))
+      // Update the order in order_details table
+      const { error: updateError } = await supabase
+        .from('order_details')
+        .update({
+          order_status: statusForm.status,
+          admin_notes: statusForm.admin_notes,
+          tracking_number: statusForm.tracking_number,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedOrder.id)
+
+      if (updateError) {
+        console.error('❌ Error updating order:', updateError)
+        throw updateError
       }
+
+      console.log('✅ Order status updated successfully')
+      setSuccess('Order status updated successfully')
+      setShowStatusDialog(false)
+      setStatusForm({ status: '', admin_notes: '', tracking_number: '' })
+      setSelectedOrder(null)
+      
+      // Refresh orders
+      await fetchOrders()
       
     } catch (error) {
       console.error('❌ Error updating order status:', error)
-      setError(error.message || 'Failed to update order status')
+      setError('Failed to update order status')
     } finally {
       setLoading(false)
     }
@@ -260,30 +186,6 @@ export default function OrderManagement() {
     setShowOrderDialog(true)
   }
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-4 h-4" />
-      case 'confirmed': return <CheckCircle className="w-4 h-4" />
-      case 'processing': return <Package className="w-4 h-4" />
-      case 'shipped': return <Truck className="w-4 h-4" />
-      case 'delivered': return <CheckCircle className="w-4 h-4" />
-      case 'cancelled': return <XCircle className="w-4 h-4" />
-      default: return <Clock className="w-4 h-4" />
-    }
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'confirmed': return 'bg-blue-100 text-blue-800'
-      case 'processing': return 'bg-purple-100 text-purple-800'
-      case 'shipped': return 'bg-orange-100 text-orange-800'
-      case 'delivered': return 'bg-green-100 text-green-800'
-      case 'cancelled': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -294,26 +196,6 @@ export default function OrderManagement() {
     
     return matchesSearch && matchesStatus
   })
-
-  const formatAddress = (address) => {
-    if (!address) return 'N/A'
-    if (typeof address === 'string') {
-      try {
-        address = JSON.parse(address)
-      } catch {
-        return address
-      }
-    }
-    
-    const parts = [
-      address.address_line_1,
-      address.address_line_2,
-      address.city,
-      address.postal_code
-    ].filter(Boolean)
-    
-    return parts.join(', ') || 'Address not available'
-  }
 
   const handleManualRefresh = async () => {
     setRefreshing(true)
@@ -714,4 +596,57 @@ export default function OrderManagement() {
       </Dialog>
     </div>
   )
+}
+
+// Helper functions
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+    case 'confirmed':
+      return 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+    case 'processing':
+      return 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+    case 'shipped':
+      return 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+    case 'delivered':
+      return 'bg-green-100 text-green-800 hover:bg-green-200'
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 hover:bg-red-200'
+    default:
+      return 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+  }
+}
+
+const getStatusIcon = (status) => {
+  switch (status) {
+    case 'pending':
+      return <Clock className="w-4 h-4" />
+    case 'confirmed':
+      return <CheckCircle className="w-4 h-4" />
+    case 'processing':
+      return <Package className="w-4 h-4" />
+    case 'shipped':
+      return <Truck className="w-4 h-4" />
+    case 'delivered':
+      return <CheckCircle className="w-4 h-4" />
+    case 'cancelled':
+      return <XCircle className="w-4 h-4" />
+    default:
+      return <Clock className="w-4 h-4" />
+  }
+}
+
+const formatAddress = (address) => {
+  if (!address) return 'No address provided'
+  
+  const parts = []
+  if (address.full_name) parts.push(address.full_name)
+  if (address.address_line_1) parts.push(address.address_line_1)
+  if (address.address_line_2) parts.push(address.address_line_2)
+  if (address.city) parts.push(address.city)
+  if (address.postal_code) parts.push(address.postal_code)
+  if (address.phone) parts.push(`Phone: ${address.phone}`)
+  
+  return parts.join(', ')
 }

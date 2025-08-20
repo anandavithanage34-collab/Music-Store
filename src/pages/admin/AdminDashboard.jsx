@@ -42,32 +42,10 @@ export default function AdminDashboard() {
 
   // Function to update stats immediately when new order arrives
   const updateStatsForNewOrder = (newOrder) => {
-    console.log('📊 Updating stats for new order:', newOrder)
+    console.log('📊 Updating stats for new order from order_details:', newOrder)
     
     setStats(prev => {
-      // Check if this is a mock order
-      const isMockOrder = newOrder.id && newOrder.id.toString().startsWith('mock-')
-      
-      if (isMockOrder) {
-        // For mock orders, we need to fetch all mock orders to get accurate counts
-        try {
-          const storedOrders = localStorage.getItem('mock_orders')
-          if (storedOrders) {
-            const mockOrders = JSON.parse(storedOrders)
-            const mockRevenue = mockOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
-            
-            return {
-              ...prev,
-              totalOrders: prev.totalOrders + 1,
-              totalRevenue: mockRevenue
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error updating mock order stats:', error)
-        }
-      }
-      
-      // For real orders, update immediately
+      // Update stats immediately for new orders from order_details table
       return {
         ...prev,
         totalOrders: prev.totalOrders + 1,
@@ -79,18 +57,18 @@ export default function AdminDashboard() {
   const fetchDashboardStats = async () => {
     try {
       setStatsLoading(true)
-      console.log('📊 Fetching real dashboard stats...')
+      console.log('📊 Fetching real dashboard stats from order_details table...')
       
       // Get basic counts from database
-      const [productsResult, ordersResult, usersResult] = await Promise.all([
+      const [productsResult, orderDetailsResult, usersResult] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact' }),
-        supabase.from('orders').select('id', { count: 'exact' }),
+        supabase.from('order_details').select('id', { count: 'exact' }),
         supabase.from('profiles').select('id', { count: 'exact' })
       ])
       
-      // Get revenue from database orders
+      // Get revenue from order_details table
       const { data: revenueData, error: revenueError } = await supabase
-        .from('orders')
+        .from('order_details')
         .select('total_amount')
       
       let totalRevenue = 0
@@ -98,55 +76,30 @@ export default function AdminDashboard() {
         totalRevenue = revenueData.reduce((sum, order) => sum + (order.total_amount || 0), 0)
       }
       
-      // Get recent orders count (last 24 hours) from database
+      // Get recent orders count (last 24 hours) from order_details table
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
       
       const { data: recentOrders, error: recentError } = await supabase
-        .from('orders')
+        .from('order_details')
         .select('id')
         .gte('created_at', yesterday.toISOString())
       
       const recentOrdersCount = recentError ? 0 : (recentOrders?.length || 0)
       
-      // Also check localStorage for mock orders (development)
-      let mockOrdersCount = 0
-      let mockRevenue = 0
-      let mockRecentCount = 0
+      // Get total orders and revenue from order_details table
+      const totalOrders = orderDetailsResult.count || 0
+      const totalRevenueCombined = totalRevenue
+      const totalRecentOrders = recentOrdersCount
       
-      try {
-        const storedOrders = localStorage.getItem('mock_orders')
-        if (storedOrders) {
-          const mockOrders = JSON.parse(storedOrders)
-          mockOrdersCount = mockOrders.length
-          mockRevenue = mockOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
-          
-          // Count mock orders from last 24 hours
-          const mockRecent = mockOrders.filter(order => {
-            const orderDate = new Date(order.created_at || order.updated_at)
-            return orderDate >= yesterday
-          })
-          mockRecentCount = mockRecent.length
-        }
-      } catch (mockError) {
-        console.error('❌ Mock orders error:', mockError)
-      }
-      
-      // Combine database and mock stats
-      const totalOrders = (ordersResult.count || 0) + mockOrdersCount
-      const totalRevenueCombined = totalRevenue + mockRevenue
-      const totalRecentOrders = recentOrdersCount + mockRecentCount
-      
-      console.log('✅ Dashboard stats fetched:', {
+      console.log('✅ Dashboard stats fetched from order_details table:', {
         products: productsResult.count || 0,
         orders: totalOrders,
         users: usersResult.count || 0,
         revenue: totalRevenueCombined,
         recentOrders: totalRecentOrders,
-        dbOrders: ordersResult.count || 0,
-        mockOrders: mockOrdersCount,
-        dbRevenue: totalRevenue,
-        mockRevenue: mockRevenue
+        dbOrders: orderDetailsResult.count || 0,
+        dbRevenue: totalRevenue
       })
       
       setStats({
@@ -167,30 +120,30 @@ export default function AdminDashboard() {
     // Fetch dashboard stats immediately
     fetchDashboardStats()
     
-    // Set up real-time subscription for new orders
+    // Set up real-time subscription for new orders from order_details table
     const ordersSubscription = supabase
-      .channel('admin_orders_changes')
+      .channel('admin_order_details_changes')
       .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'orders' }, 
+        { event: 'INSERT', schema: 'public', table: 'order_details' }, 
         (payload) => {
-          console.log('🆕 New order received:', payload.new)
+          console.log('🆕 New order received from order_details:', payload.new)
           setNewOrders(prev => [payload.new, ...prev.slice(0, 4)]) // Keep last 5 new orders
           // Immediately update stats when new order arrives
           updateStatsForNewOrder(payload.new)
         }
       )
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        { event: 'UPDATE', schema: 'public', table: 'order_details' },
         (payload) => {
-          console.log('🔄 Order updated:', payload.new)
+          console.log('🔄 Order updated in order_details:', payload.new)
           // Refresh stats when order status changes (affects revenue calculations)
           fetchDashboardStats()
         }
       )
       .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'orders' },
+        { event: 'DELETE', schema: 'public', table: 'order_details' },
         () => {
-          console.log('🗑️ Order deleted')
+          console.log('🗑️ Order deleted from order_details')
           // Refresh stats when order status changes
           fetchDashboardStats()
         }
@@ -286,6 +239,9 @@ export default function AdminDashboard() {
                                 </p>
                                 <p className="text-xs text-gray-600">
                                   LKR {order.total_amount?.toLocaleString() || '0'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {order.customer_full_name || 'Customer'}
                                 </p>
                               </div>
                               <span className="text-xs text-gray-500">

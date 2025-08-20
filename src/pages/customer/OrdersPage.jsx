@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { useAuth } from '../../hooks/useAuth'
 import { formatPrice, formatDate } from '../../lib/utils'
 import { supabase } from '../../lib/supabase'
-import { sampleProducts } from '../../lib/sampleData'
 
 export default function OrdersPage() {
   const { user } = useAuth()
@@ -18,11 +17,11 @@ export default function OrdersPage() {
     if (user) {
       fetchOrders()
       
-      // Set up real-time subscription for order updates
+      // Set up real-time subscription for order updates from order_details table
       const ordersSubscription = supabase
-        .channel('customer_orders_changes')
+        .channel('customer_order_details_changes')
         .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'orders' }, 
+          { event: 'UPDATE', schema: 'public', table: 'order_details' }, 
           (payload) => {
             console.log('🔄 Order updated in real-time:', payload.new)
             // Check if this order belongs to the current user
@@ -40,7 +39,7 @@ export default function OrdersPage() {
           }
         )
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'orders' },
+          { event: 'INSERT', schema: 'public', table: 'order_details' },
           (payload) => {
             console.log('🆕 New order received in real-time:', payload.new)
             // Check if this new order belongs to the current user
@@ -59,60 +58,7 @@ export default function OrdersPage() {
     }
   }, [user])
 
-  // Add some sample orders for testing
-  const createSampleOrders = () => {
-    const sampleOrders = [
-      {
-        id: 'mock-order-1',
-        order_number: 'MUS-001',
-        user_id: user.id,
-        status: 'delivered',
-        total_amount: 25000,
-        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        shipping_address: {
-          full_name: 'John Doe',
-          city: 'Colombo',
-          address_line_1: '123 Main Street',
-          phone: '+94 77 123 4567'
-        },
-        order_items: [
-          {
-            id: 'item-1',
-            product_id: '1',
-            quantity: 1,
-            unit_price: 25000,
-            total_price: 25000
-          }
-        ]
-      },
-      {
-        id: 'mock-order-2',
-        order_number: 'MUS-002', 
-        user_id: user.id,
-        status: 'processing',
-        total_amount: 45000,
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        shipping_address: {
-          full_name: 'Jane Smith',
-          city: 'Kandy',
-          address_line_1: '456 Hill Road',
-          phone: '+94 77 987 6543'
-        },
-        order_items: [
-          {
-            id: 'item-2',
-            product_id: '2',
-            quantity: 1,
-            unit_price: 45000,
-            total_price: 45000
-          }
-        ]
-      }
-    ];
 
-    localStorage.setItem('mock_orders', JSON.stringify(sampleOrders));
-    console.log('✨ Sample orders created for testing');
-  };
 
   const fetchOrders = async () => {
     if (!user) {
@@ -123,82 +69,54 @@ export default function OrdersPage() {
     try {
       console.log('🔍 Fetching orders for user:', user.id)
       
-      // Try database first for real orders
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              *,
-              products (
-                id,
-                name,
-                price,
-                product_images (image_url, is_primary)
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
+      // Fetch orders from the simplified order_details table
+      const { data, error } = await supabase
+        .from('order_details')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-        if (!error && data && data.length > 0) {
-          console.log('📊 Database orders found:', data)
-          setOrders(data)
-          setLoading(false)
-          return
-        }
-      } catch (dbError) {
-        console.log('⚠️ Database fetch failed, falling back to localStorage:', dbError)
+      if (error) {
+        console.error('❌ Error fetching orders:', error)
+        throw error
       }
-      
-      // Fallback to localStorage for mock orders
-      let mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
-      console.log('📦 Found mock orders:', mockOrders)
-      
-      // If no orders exist, create sample orders for testing
-      if (mockOrders.length === 0) {
-        createSampleOrders()
-        mockOrders = JSON.parse(localStorage.getItem('mock_orders') || '[]')
-      }
-      
-      // Filter orders for current user
-      const userOrders = mockOrders.filter(order => 
-        order.user_id === user.id || 
-        order.user_id === 'mock-user' ||
-        order.user_id?.startsWith('mock-') // Include all mock orders for testing
-      )
-      console.log('👤 User orders filtered:', userOrders)
-      
-      if (userOrders.length > 0) {
-        // Enrich order items with full product details from sampleProducts
-        const enrichedOrders = userOrders.map(order => ({
-          ...order,
-          order_items: order.order_items?.map(item => {
-            const productDetails = sampleProducts.find(p => p.id == item.product_id) // Use == for type flexibility
-            return {
-              ...item,
-              products: productDetails || {
-                id: item.product_id,
-                name: `Product ${item.product_id}`,
-                price: item.unit_price || 0,
-                product_images: []
-              }
-            }
-          }) || []
+
+      if (data && data.length > 0) {
+        console.log('📊 Orders found from order_details table:', data)
+        
+        // Transform the data to match the expected format
+        const transformedOrders = data.map(order => ({
+          id: order.id,
+          order_number: order.order_number,
+          user_id: order.user_id,
+          status: order.order_status,
+          payment_status: order.payment_status,
+          total_amount: order.total_amount,
+          subtotal: order.subtotal,
+          delivery_fee: order.delivery_fee,
+          payment_method: order.payment_method,
+          customer_notes: order.customer_notes,
+          admin_notes: order.admin_notes,
+          tracking_number: order.tracking_number,
+          estimated_delivery_date: order.estimated_delivery_date,
+          actual_delivery_date: order.actual_delivery_date,
+          created_at: order.created_at,
+          updated_at: order.updated_at,
+          shipping_address: order.shipping_address,
+          billing_address: order.billing_address,
+          // Extract items from the JSON order_items field
+          order_items: order.order_items || [],
+          total_items: order.total_items || 0
         }))
         
-        console.log('✅ Setting enriched orders:', enrichedOrders)
-        setOrders(enrichedOrders)
-        setLoading(false)
-        return
+        setOrders(transformedOrders)
+      } else {
+        console.log('🔄 No orders found for user')
+        setOrders([])
       }
-
-      console.log('🔄 No orders found, setting empty array')
-      setOrders([])
       
     } catch (error) {
-      console.error('Error fetching orders:', error)
+      console.error('❌ Error fetching orders:', error)
       setOrders([])
     } finally {
       setLoading(false)
@@ -318,7 +236,7 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-3 mt-4 md:mt-0">
                           <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.status)}`}>
                             {getStatusIcon(order.status)}
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
                           </div>
                           <Button
                             variant="outline"
@@ -333,18 +251,22 @@ export default function OrdersPage() {
                     </CardHeader>
                     
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                         <div>
                           <p className="text-sm text-gray-600">Total Amount</p>
                           <p className="font-semibold text-lg">{formatPrice(order.total_amount)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Items</p>
-                          <p className="font-semibold">{order.order_items?.length || 0} item(s)</p>
+                          <p className="font-semibold">{order.total_items || order.order_items?.length || 0} item(s)</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Shipping Address</p>
-                          <p className="font-semibold">{order.shipping_address?.city || 'N/A'}</p>
+                          <p className="text-sm text-gray-600">Payment Status</p>
+                          <p className="font-semibold">{order.payment_status || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Payment Method</p>
+                          <p className="font-semibold">{order.payment_method || 'N/A'}</p>
                         </div>
                       </div>
 
@@ -364,10 +286,10 @@ export default function OrdersPage() {
                               {order.order_items?.map((item, itemIndex) => (
                                 <div key={itemIndex} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                   <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                                    {item.products?.product_images?.[0] ? (
+                                    {item.product_image ? (
                                       <img
-                                        src={item.products.product_images[0].image_url}
-                                        alt={item.products.name}
+                                        src={item.product_image}
+                                        alt={item.product_name}
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
@@ -378,13 +300,21 @@ export default function OrdersPage() {
                                   </div>
                                   <div className="flex-1">
                                     <p className="font-medium text-gray-900">
-                                      {item.products?.name || `Product ${item.product_id}`}
+                                      {item.product_name || `Product ${item.product_id}`}
                                     </p>
                                     <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                                    {item.product_sku && (
+                                      <p className="text-xs text-gray-400">SKU: {item.product_sku}</p>
+                                    )}
                                   </div>
-                                  <p className="font-semibold text-gray-900">
-                                    {formatPrice(item.total_price || item.unit_price * item.quantity)}
-                                  </p>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-gray-900">
+                                      {formatPrice(item.total_price)}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {formatPrice(item.unit_price)} each
+                                    </p>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -420,7 +350,7 @@ export default function OrdersPage() {
                               <div className="flex items-center gap-2">
                                 {getStatusIcon(order.status)}
                                 <span className="font-medium">
-                                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                  {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
                                 </span>
                                 <span className="text-sm text-gray-500">
                                   • Last updated: {formatDate(order.updated_at || order.created_at)}
